@@ -10,7 +10,6 @@
 using namespace std;
 
 #include <time.h>
-#include <stdarg.h>
 
 #include <curl/curl.h>
 #pragma comment(lib, "libcurl_imp.lib")
@@ -32,32 +31,17 @@ bool bReady2Exit = false;
 
 std::vector<pthread_t> threadVector;
 
-#if 0
-typedef struct _logUnit_
-{
-	int level;
-	std::string logDetail;
-}logUnit;
-std::deque<_logUnit_> logQ;
-
-void logger2(int level, std::string sLog)
-{
-	logUnit lu;
-	lu.level = level;
-	lu.logDetail = sLog;
-	logQ.push_back(lu);
-
-	return ;
-}
-#endif
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
 {
+	libSylvia_logger_ini(false);
 
 	return 0;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin()
 {
+	libSylvia_logger_fin(true);
+
 	return 0;
 }

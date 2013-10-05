@@ -92,6 +92,7 @@ copy /Y ..\public\bin\zlib1.dll ..\Debug</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libSylvia.cpp" />
+    <ClCompile Include="libSylviaLogger.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libSylvia.def" />

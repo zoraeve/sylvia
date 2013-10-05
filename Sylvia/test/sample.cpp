@@ -90,17 +90,10 @@ void logger(int level, const char* format, ...)
 	
 	return ;
 }
-#if defined(_WIN32) || defined(_WIN64)
 #define LOG_INFO(fmt, ...)  logger(0, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)  logger(1, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) logger(2, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_FATAL(fmt, ...) logger(3, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#else
-#define LOG_INFO(fmt, ...)  logger(0, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
-#define LOG_WARN(fmt, ...)  logger(1, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
-#define LOG_ERROR(fmt, ...) logger(2, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
-#define LOG_FATAL(fmt, ...) logger(3, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args) 
-#endif
 
 size_t HttpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
@@ -490,7 +483,7 @@ int Process(const char* szURI, const char* szSaveAs = nullptr)
 
 int main(int argc, char* argv[])
 {
-	google::InitGoogleLogging(argv[0]);
+	google::InitGoogleLogging("hello");
 	google::SetLogDestination(google::GLOG_INFO, "./Sylvia_");
 
 	pthread_rwlock_init(&taskQLock, nullptr);
