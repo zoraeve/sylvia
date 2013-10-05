@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sylvia", "Sylvia\Sylvia.vcxproj", "{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libSylvia", "libSylvia\libSylvia.vcxproj", "{DE5D8617-BC00-4043-9BE5-D39046A72068}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{A1F83406-50B0-482F-9F64-2240A642CEB2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}.Debug|Win32.Build.0 = Debug|Win32
+		{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}.Release|Win32.ActiveCfg = Release|Win32
+		{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}.Release|Win32.Build.0 = Release|Win32
+		{DE5D8617-BC00-4043-9BE5-D39046A72068}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DE5D8617-BC00-4043-9BE5-D39046A72068}.Debug|Win32.Build.0 = Debug|Win32
+		{DE5D8617-BC00-4043-9BE5-D39046A72068}.Release|Win32.ActiveCfg = Release|Win32
+		{DE5D8617-BC00-4043-9BE5-D39046A72068}.Release|Win32.Build.0 = Release|Win32
+		{A1F83406-50B0-482F-9F64-2240A642CEB2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A1F83406-50B0-482F-9F64-2240A642CEB2}.Debug|Win32.Build.0 = Debug|Win32
+		{A1F83406-50B0-482F-9F64-2240A642CEB2}.Release|Win32.ActiveCfg = Release|Win32
+		{A1F83406-50B0-482F-9F64-2240A642CEB2}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
