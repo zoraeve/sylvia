@@ -50,11 +50,23 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBSYLVIA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\public\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ModuleDefinitionFile>libSylvia.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>..\public\lib</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y ..\public\bin\libcurl.dll ..\Debug
+copy /Y ..\public\bin\libeay32.dll ..\Debug
+copy /Y ..\public\bin\libglog.dll ..\Debug
+copy /Y ..\public\bin\pthreadVC2.dll ..\Debug
+copy /Y ..\public\bin\pthreadVCE2.dll ..\Debug
+copy /Y ..\public\bin\ssleay32.dll ..\Debug
+copy /Y ..\public\bin\zlib1.dll ..\Debug</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -71,9 +83,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>libSylvia.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="libSylvia.h" />
+    <ClInclude Include="libSylviaLogger.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="libSylvia.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="libSylvia.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

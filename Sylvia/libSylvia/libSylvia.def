@@ -1,0 +1,5 @@
+LIBRARY libSylvia
+EXPORTS
+
+libSylvia_ini
+libSylvia_fin

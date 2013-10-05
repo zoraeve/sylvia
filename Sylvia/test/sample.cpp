@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <deque>
 #include <map>
 using namespace std;
@@ -30,6 +31,30 @@ pthread_rwlock_t taskQLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_t threadPool[threadPoolSize];
 std::map<int, std::string> contents;
 
+bool bReady2Exit = false;
+
+#define ASYNC_LOG
+#ifdef ASYNC_LOG
+typedef struct _logUnit_
+{
+	int level;
+	std::string logDetail;
+}logUnit;
+std::deque<_logUnit_> logQ;
+
+void logger2(int level, std::string sLog)
+{
+	logUnit lu;
+	lu.level = level;
+	lu.logDetail = sLog;
+	logQ.push_back(lu);
+
+	return ;
+}
+#endif 
+
+std::vector<pthread_t> threadVector;
+
 void logger(int level, const char* format, ...)
 {
 	va_list pArg;
@@ -40,6 +65,7 @@ void logger(int level, const char* format, ...)
 
 	va_end(pArg);
 
+#ifndef ASYNC_LOG
 	switch(level)
 	{
 	case 0:
@@ -58,9 +84,23 @@ void logger(int level, const char* format, ...)
 		LOG(INFO) << pBuf << endl;
 		break;
 	}
-
+#else
+	logger2(level, pBuf);
+#endif
+	
 	return ;
 }
+#if defined(_WIN32) || defined(_WIN64)
+#define LOG_INFO(fmt, ...)  logger(0, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)  logger(1, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) logger(2, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define LOG_FATAL(fmt, ...) logger(3, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#else
+#define LOG_INFO(fmt, ...)  logger(0, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_WARN(fmt, ...)  logger(1, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_ERROR(fmt, ...) logger(2, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_FATAL(fmt, ...) logger(3, "<%s>|<%d>|<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args) 
+#endif
 
 size_t HttpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
@@ -94,6 +134,51 @@ size_t HttpContentHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 	return size * nmemb;
 }
 
+void* thdLogger(void* lparam)
+{
+	while(1)
+	{
+		if (logQ.size())
+		{
+			logUnit lu = logQ.front();
+			logQ.pop_front();
+			switch(lu.level)
+			{
+			case 0:
+				LOG(INFO) << lu.logDetail << endl;
+				break;
+			case 1:
+				LOG(WARNING) << lu.logDetail << endl;
+				break;
+			case 2:
+				LOG(ERROR) << lu.logDetail << endl;
+				break;
+			case 3:
+				LOG(FATAL) << lu.logDetail << endl;
+				break;
+			default:
+				LOG(INFO) << lu.logDetail << endl;
+				break;
+			}
+		}
+		else
+		{
+			if (!bReady2Exit)
+			{
+				Sleep(10);
+				continue;
+			}
+			break;
+		}
+	}
+
+	return nullptr;
+}
+
+int judgement()
+{
+	return 0;
+}
 
 int GetHttpContentLength(const char* szURI)
 {
@@ -108,7 +193,8 @@ int GetHttpContentLength(const char* szURI)
 	pCurl = curl_easy_init();
 	if (nullptr == pCurl)
 	{
-		logger(ERROR, "%s", "curl_easy_init failed");
+//		logger(ERROR, "%s", "curl_easy_init failed");
+		LOG_ERROR("curl_easy_init failed");
 		return -2;
 	}
 
@@ -185,7 +271,7 @@ int GetHttpContent(const char* szURI)
 
 	curl_easy_setopt(pCurl, CURLOPT_URL, szURI);
 	curl_easy_setopt(pCurl, CURLOPT_FOLLOWLOCATION, 1L);
-	//	curl_easy_setopt(pCurl, CURLOPT_VERBOSE, 1L);
+//	curl_easy_setopt(pCurl, CURLOPT_VERBOSE, 1L);
 	curl_easy_setopt(pCurl, CURLOPT_NOSIGNAL, 1L);
 	curl_easy_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, 30);
 	curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &HttpContentHandler);
@@ -257,7 +343,7 @@ void* thdGetHttpContent(void* lparam)
 
 		curl_easy_setopt(pCurl, CURLOPT_URL, szURI);
 		curl_easy_setopt(pCurl, CURLOPT_FOLLOWLOCATION, 1L);
-		//		curl_easy_setopt(pCurl, CURLOPT_VERBOSE, 1L);
+//		curl_easy_setopt(pCurl, CURLOPT_VERBOSE, 1L);
 		curl_easy_setopt(pCurl, CURLOPT_NOSIGNAL, 1L);
 		curl_easy_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, 10);
 
@@ -361,7 +447,8 @@ int Process(const char* szURI, const char* szSaveAs = nullptr)
 		return -2;
 	}
 
-	logger(0, "%s%d", "http content length: ", nSize);
+//	logger(0, "%s%d", "http content length: ", nSize);
+	LOG_INFO("%s%d", "http content length: ", nSize);
 
 	int nFrames = nSize / segment + 1;
 	for (int cnt = 0; cnt < nFrames; ++cnt)
@@ -408,6 +495,11 @@ int main(int argc, char* argv[])
 
 	pthread_rwlock_init(&taskQLock, nullptr);
 
+#ifdef ASYNC_LOG
+	pthread_t thdLog;
+	pthread_create(&thdLog, nullptr, thdLogger, nullptr);
+#endif
+
 #ifdef PRODUCT_RELEASE
 	switch(argc)
 	{
@@ -423,8 +515,6 @@ int main(int argc, char* argv[])
 			std::cout << "test.exe URI File" << endl;
 			std::cout << "Sample: " << endl;
 			std::cout << "test.exe http://sample.com/sample.txt sample.txt" << endl;
-
-			system("pause");
 		}
 		break;
 	}
@@ -436,15 +526,22 @@ int main(int argc, char* argv[])
 		contents.clear();
 
 		cout << "================================= start: =================================" << endl;
-		Process("http://optimate.dl.sourceforge.net/project/udt/udt/4.11/udt.sdk.4.11.tar.gz", nullptr);
+//		Process("http://optimate.dl.sourceforge.net/project/udt/udt/4.11/udt.sdk.4.11.tar.gz", nullptr);
+//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", nullptr);
+		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", nullptr);
 		cout << "================================= done:  =================================" << endl;
 	}
 #endif
 
-	cout << endl << "All Finished" << endl;
+#ifdef ASYNC_LOG
+	bReady2Exit = true;
+	void* ptrRet;
+	pthread_join(thdLog, &ptrRet);
+#endif
 
 	google::FlushLogFiles(0);
 
+	cout << endl << "cleanup" << endl;
 	system("pause");
 
 	return 0;
