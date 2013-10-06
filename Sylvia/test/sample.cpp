@@ -432,7 +432,7 @@ int Process(const char* szURI, const char* szSaveAs = nullptr)
 
 	int nSize = GetHttpContentLength(szURI);
 
-	//	GetHttpContent(szURI);
+//	GetHttpContent(szURI);
 
 	if (0 >= nSize)
 	{
@@ -512,8 +512,8 @@ int main(int argc, char* argv[])
 		break;
 	}
 #else
-	// 	int cnt = 5;
-	// 	while(--cnt)
+// 	int cnt = 5;
+// 	while(--cnt)
 	{
 		taskQ.clear();
 		contents.clear();

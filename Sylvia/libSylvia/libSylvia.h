@@ -31,16 +31,16 @@ extern "C"
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini();
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin();
 
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet();
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet(const char* szURI, const char* szSaveAs);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet(const char* szURI, const char* szSaveAs);
 
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet();
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet(const char* szURI, const char* szSaveAs);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const char* szSaveAs);
 
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query();
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause();
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume();
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause(const int index);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const int index);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const int index);
 
 #ifdef __cplusplus
 }

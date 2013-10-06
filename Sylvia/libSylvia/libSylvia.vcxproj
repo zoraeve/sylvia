@@ -89,10 +89,13 @@ copy /Y ..\public\bin\zlib1.dll ..\Debug</Command>
   <ItemGroup>
     <ClInclude Include="libSylvia.h" />
     <ClInclude Include="libSylviaLogger.h" />
+    <ClInclude Include="libSylviaUtility.h" />
+    <ClInclude Include="libSylvia_engine.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libSylvia.cpp" />
     <ClCompile Include="libSylviaLogger.cpp" />
+    <ClCompile Include="libSylvia_engine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libSylvia.def" />
