@@ -28,7 +28,7 @@ public:
 	std::string currentURI;
 
 public:
-	bool bBusy() const;
+	bool bBusy();
 	int addTask(LIBSYLVIA_TASK& task);
 	int cleanup();
 
@@ -38,18 +38,22 @@ public:
 
 	pthread_t thread;
 
+	float progress;
+
 public:
 	std::deque<int> taskQ;
 	pthread_rwlock_t taskQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
 	pthread_t threadPool[threadPoolSize];
 	std::map<int, std::string> contents;
 
-	bool bReady2Exit/* = false*/;
-
-	std::vector<pthread_t> threadVector;
-
 public:
 	int GetHttpContentLength();
 	int SaveToFile(const char* szSaveAs);
+
+public:
+	int query(LIBSYLVIA_STATUS& status);
+	int pause();
+	int resume();
+	int cancel();
 };
 

@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sylvia", "Sylvia\Sylvia.vcxproj", "{18AA2FE4-4F10-47CF-B67F-8183C5C031E7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DE5D8617-BC00-4043-9BE5-D39046A72068} = {DE5D8617-BC00-4043-9BE5-D39046A72068}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libSylvia", "libSylvia\libSylvia.vcxproj", "{DE5D8617-BC00-4043-9BE5-D39046A72068}"
 EndProject

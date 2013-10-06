@@ -149,6 +149,7 @@ void* worker(void* lparam)
 
 	if (0 == p->task.URI.length())
 	{
+		p->busy = false;
 		return nullptr;
 	}
 
@@ -157,6 +158,7 @@ void* worker(void* lparam)
 	if (0 >= nSize)
 	{
 		LIBSYLVIA_LOG_ERROR("get http content length error");
+		p->busy = false;
 		return nullptr;
 	}
 
@@ -170,6 +172,8 @@ void* worker(void* lparam)
 
 	LIBSYLVIA_LOG_INFO("%s%d%s", "Split to ", nFrames, " pieces");
 
+	p->progress = 0.0;
+
 	for (int cnt = 0; cnt < threadPoolSize; ++cnt)
 	{
 		pthread_create(&p->threadPool[cnt], nullptr, &thdGetHttpContent, lparam);
@@ -177,8 +181,13 @@ void* worker(void* lparam)
 
 	do 
 	{
-		float progress = ( (float)p->contents.size() / (float)nFrames ) * 100.0;
-		cout << progress << "% Complete" << endl;
+		if (0)
+		{
+			break;
+		}
+
+		p->progress = ( (float)p->contents.size() / (float)nFrames ) * 100.0;
+		cout << p->progress << "% Complete" << endl;
 		Sleep(1000);
 	} while (p->contents.size() < nFrames);
 
@@ -191,15 +200,18 @@ void* worker(void* lparam)
 		if (std::string::npos == s.find("/"))
 		{
 			p->SaveToFile(p->task.URI.c_str());
+			p->busy = false;
 			return nullptr;
 		}
 		else
 		{
 			p->SaveToFile(s.substr(s.find_last_of("/") + 1).c_str());
+			p->busy = false;
 			return nullptr;
 		}
 	}
 	p->SaveToFile(p->task.SaveAs.c_str());
+	p->busy = false;
 
 	return nullptr;
 }
@@ -207,6 +219,8 @@ void* worker(void* lparam)
 libSylvia_engine::libSylvia_engine(void)
 {
 	busy = false;
+
+	progress = 0.0;
 
 	pthread_rwlock_init(&taskQLock, nullptr);
 }
@@ -216,7 +230,7 @@ libSylvia_engine::~libSylvia_engine(void)
 {
 }
 
-bool libSylvia_engine::bBusy() const
+bool libSylvia_engine::bBusy()
 {
 	return busy;
 }
@@ -339,5 +353,19 @@ int libSylvia_engine::SaveToFile( const char* szSaveAs )
 	file.flush();
 	file.close();
 
+	return 0;
+}
+
+int libSylvia_engine::query(LIBSYLVIA_STATUS& status)
+{
+	strncpy(status.szCurrentURI, task.URI.c_str(), task.URI.length());
+	strncpy(status.szCurrentSaveAs, task.SaveAs.c_str(), task.SaveAs.length());
+	status.currentProgress = progress;
+
+	return 0;
+}
+
+int libSylvia_engine::cancel()
+{
 	return 0;
 }

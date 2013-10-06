@@ -14,6 +14,8 @@
 #include <Windows.h>
 #endif
 
+#include <time.h>
+
 std::deque<LIBSYLVIA_TASK> libSylvia_taskQ;
 pthread_t libSylvia_thread;
 LIBSYLVIA_TASK libSylvia_currentTask;
@@ -87,7 +89,28 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet(const char* szURI, const 
 {
 	LIBSYLVIA_TASK task;
 	task.URI = szURI;
-	task.SaveAs = szSaveAs;
+
+	if (nullptr == szSaveAs)
+	{
+		std::string s = szURI;
+		if (std::string::npos == s.find("/"))
+		{
+			char szName[128] = {0};
+			srand(time(NULL));
+			int name = rand();
+			sprintf(szName, "%d.save", name);
+			task.SaveAs = szName;
+		}
+		else
+		{
+			task.SaveAs =s.substr(s.find_last_of("/") + 1).c_str();
+		}
+	}
+	else
+	{
+		task.SaveAs = szSaveAs;
+	}
+
 	task.method = _LIBSYLVIA_METHOD_HTTP_;
 
 	libSylvia_taskQ.push_back(task);
@@ -131,8 +154,12 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 	return 0;
 }
 
-LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index)
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index, LIBSYLVIA_STATUS& status)
 {
+	libSylvia_Engine.query(status);
+
+	status.nRemainTasks = libSylvia_taskQ.size();
+
 	return 0;
 }
 
@@ -148,5 +175,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const int index)
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const int index)
 {
+	libSylvia_Engine.cancel();
+
 	return 0;
 }

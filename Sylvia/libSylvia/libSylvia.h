@@ -23,6 +23,14 @@
 #define LIBSYLVIA_CALLBACK _cdecl
 #endif
 
+typedef struct _LIBSYLVIA_STATUS_
+{
+	char* szCurrentURI;
+	char* szCurrentSaveAs;
+	float currentProgress;
+	unsigned int nRemainTasks;
+}LIBSYLVIA_STATUS;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -37,7 +45,7 @@ extern "C"
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet(const char* szURI, const char* szSaveAs);
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const char* szSaveAs);
 
-	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index);
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index, LIBSYLVIA_STATUS& status);
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause(const int index);
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const int index);
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const int index);
