@@ -89,6 +89,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_logger_ini(bool flag)
 // 	pthread_mutex_init(&libSylvia_logger_mutex, nullptr);
 // 	pthread_cond_init(&libSylvia_logger_cond, nullptr);
 
+	pthread_create(&libSylvia_logger_thread, nullptr, logger, nullptr);
+
 	return 0;
 }
 

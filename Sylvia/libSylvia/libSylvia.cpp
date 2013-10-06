@@ -45,3 +45,43 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin()
 
 	return 0;
 }
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume()
+{
+	return 0;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel()
+{
+	return 0;
+}

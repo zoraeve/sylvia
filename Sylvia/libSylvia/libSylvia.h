@@ -31,6 +31,17 @@ extern "C"
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini();
 	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin();
 
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet();
+
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet();
+
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume();
+	LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel();
+
 #ifdef __cplusplus
 }
 #endif

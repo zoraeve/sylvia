@@ -3,3 +3,14 @@ EXPORTS
 
 libSylvia_ini
 libSylvia_fin
+
+libSylvia_httpGet
+libSylvia_httpsGet
+
+libSylvia_ftpGet
+libSylvia_sftpGet
+
+libSylvia_query
+libSylvia_pause
+libSylvia_resume
+libSylvia_cancel
