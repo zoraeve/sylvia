@@ -219,7 +219,9 @@ void* worker(void* lparam)
 libSylvia_engine::libSylvia_engine(void)
 {
 	busy = false;
-
+	task.URI = "";
+	task.SaveAs = "";
+	task.method = _LIBSYLVIA_METHOD_UNKNOWN_;
 	progress = 0.0;
 
 	pthread_rwlock_init(&taskQLock, nullptr);

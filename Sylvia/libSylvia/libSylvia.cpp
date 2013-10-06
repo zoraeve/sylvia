@@ -21,7 +21,7 @@ pthread_t libSylvia_thread;
 LIBSYLVIA_TASK libSylvia_currentTask;
 bool libSylvia_exit = true;
 
-libSylvia_engine libSylvia_Engine; 
+libSylvia_engine* libSylvia_Engine; 
 
 void* libSylvia_maintain(void* lparam)
 {
@@ -67,11 +67,12 @@ void* libSylvia_maintain(void* lparam)
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
 {
+	libSylvia_Engine = new libSylvia_engine();
 	libSylvia_exit = false;
 
 	libSylvia_logger_ini(libSylvia_exit);
 
-	pthread_create(&libSylvia_thread, nullptr, &libSylvia_maintain, (void*&)libSylvia_Engine);
+	pthread_create(&libSylvia_thread, nullptr, &libSylvia_maintain, (void*)libSylvia_Engine);
 
 	return 0;
 }
@@ -81,6 +82,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin()
 	libSylvia_exit = true;
 
 	libSylvia_logger_fin(libSylvia_exit);
+
+	delete libSylvia_Engine;
 
 	return 0;
 }
@@ -156,7 +159,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index, LIBSYLVIA_STATUS& status)
 {
-	libSylvia_Engine.query(status);
+	libSylvia_Engine->query(status);
 
 	status.nRemainTasks = libSylvia_taskQ.size();
 
@@ -175,7 +178,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const int index)
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const int index)
 {
-	libSylvia_Engine.cancel();
+	libSylvia_Engine->cancel();
 
 	return 0;
 }

@@ -25,8 +25,8 @@
 
 typedef struct _LIBSYLVIA_STATUS_
 {
-	char* szCurrentURI;
-	char* szCurrentSaveAs;
+	char szCurrentURI[4096];
+	char szCurrentSaveAs[256];
 	float currentProgress;
 	unsigned int nRemainTasks;
 }LIBSYLVIA_STATUS;
