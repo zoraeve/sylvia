@@ -12,6 +12,7 @@ using namespace std;
 #include <time.h>
 #include <stdarg.h>
 
+#if defined(_WIN32) || defined(_WIN64) 
 #include <curl/curl.h>
 #pragma comment(lib, "libcurl_imp.lib")
 
@@ -21,10 +22,23 @@ using namespace std;
 #define GLOG_NO_ABBREVIATED_SEVERITIES
 #include <glog/logging.h>
 #pragma comment(lib, "libglog.lib")
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "curl/curl.h"
+#include "pthread.h"
+#include "glog/logging.h"
+#define ERROR 2
+#endif
+
+#ifdef _LOG_WITH_LOG4CXX_
+#include "log4cxx"
+#endif
 
 #define interval 10
 #define threadPoolSize 10
-#define segment (1024 * 1024)
+#define segment (65535)
 
 std::deque<int> taskQ;
 pthread_rwlock_t taskQLock = PTHREAD_RWLOCK_INITIALIZER;
@@ -90,14 +104,62 @@ void logger(int level, const char* format, ...)
 	
 	return ;
 }
+#if defined(_WIN32) || defined(_WIN64)
 #define LOG_INFO(fmt, ...)  logger(0, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)  logger(1, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...) logger(2, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define LOG_FATAL(fmt, ...) logger(3, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#else
+#define LOG_INFO(fmt, args...)  logger(0, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_WARN(fmt, args...)  logger(1, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_ERROR(fmt, args...) logger(2, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#define LOG_FATAL(fmt, args...) logger(3, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
+#endif
+
+// four threads per group
+// the num of groups based on pieces
+// if more than 10 pieces
+// use ooo;
+// two groups together
+// download and write to file directly
+void OutOfOrderexecution(int pieces)
+{
+	if (10 >= pieces)
+	{
+		return ;
+	}
+
+	// make group
+	{
+		std::map<int, int> m;
+		while (m.size() < pieces)
+		{
+			m[rand()] = 1;
+		}
+
+		std::deque< pair< std::vector<int>, std::vector<int> > > pq;
+
+		std::map<int, int>::const_iterator iter = m.begin();
+		for ( ; ; )
+		{
+			pair< std::vector<int>, std::vector<int> > p;
+			int cnt = 4;
+			while(cnt >= 0)
+			{
+				p.first.push_back(iter->first);
+				p.second.push_back((++iter)->first);
+				++iter;
+				--cnt;
+			}
+		}
+	}
+
+	return ;
+}
 
 size_t HttpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
-	if (nullptr == stream)
+	if (NULL == stream)
 	{
 		return -1;
 	}
@@ -113,9 +175,14 @@ size_t HttpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 
 size_t HttpContentHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
-	if (nullptr == stream)
+	if (NULL == stream)
 	{
 		return -1;
+	}
+
+	if ((size * nmemb) > segment)
+	{
+		cout << "======================" << endl;
 	}
 
 	std::string* pStr = reinterpret_cast<std::string*>(stream);
@@ -158,14 +225,18 @@ void* thdLogger(void* lparam)
 		{
 			if (!bReady2Exit)
 			{
+#if defined(_WIN32) || defined(_WIN64)
 				Sleep(10);
+#else
+				usleep(10000);
+#endif
 				continue;
 			}
 			break;
 		}
 	}
 
-	return nullptr;
+	return NULL;
 }
 
 int judgement()
@@ -177,14 +248,14 @@ int GetHttpContentLength(const char* szURI)
 {
 	logger(0, "%s\n%s", "get content length for: ", szURI);
 
-	if (nullptr == szURI)
+	if (NULL == szURI)
 	{
 		return -1;
 	}
 
-	CURL* pCurl = nullptr;
+	CURL* pCurl = NULL;
 	pCurl = curl_easy_init();
-	if (nullptr == pCurl)
+	if (NULL == pCurl)
 	{
 //		logger(ERROR, "%s", "curl_easy_init failed");
 		LOG_ERROR("curl_easy_init failed");
@@ -245,14 +316,14 @@ int GetHttpContentLength(const char* szURI)
 
 int GetHttpContent(const char* szURI)
 {
-	if (nullptr == szURI)
+	if (NULL == szURI)
 	{
 		return -1;
 	}
 
-	CURL* pCurl = nullptr;
+	CURL* pCurl = NULL;
 	pCurl = curl_easy_init();
-	if (nullptr == pCurl)
+	if (NULL == pCurl)
 	{
 		logger(ERROR, "%s", "curl_easy_init failed");
 		return -2;
@@ -287,19 +358,19 @@ int GetHttpContent(const char* szURI)
 
 void* thdGetHttpContent(void* lparam)
 {
-	if (nullptr == lparam)
+	if (NULL == lparam)
 	{
-		return nullptr;
+		return NULL;
 	}
 
 	const char* szURI = reinterpret_cast<char*>(lparam);
 
-	CURL* pCurl = nullptr;
+	CURL* pCurl = NULL;
 	pCurl = curl_easy_init();
-	if (nullptr == pCurl)
+	if (NULL == pCurl)
 	{
 		logger(ERROR, "%s", "curl_easy_init failed");
-		return nullptr;
+		return NULL;
 	}
 
 	while(true)
@@ -317,7 +388,12 @@ void* thdGetHttpContent(void* lparam)
 		int nRet = pthread_rwlock_wrlock(&taskQLock);
 		if (0 != nRet)
 		{
+#if defined(_WIN32) || defined(_WIN64)
 			Sleep(interval);
+#else
+			usleep(interval * 1000);
+#endif
+			
 			continue;
 		}
 		if (0 >= taskQ.size())
@@ -368,7 +444,12 @@ void* thdGetHttpContent(void* lparam)
 			nRet = pthread_rwlock_wrlock(&taskQLock);
 			while(0 != nRet)
 			{
+#if defined(_WIN32) || defined(_WIN64)
 				Sleep(interval);
+#else
+				usleep(interval * 1000);
+#endif
+				
 				nRet = pthread_rwlock_wrlock(&taskQLock);
 			}
 			taskQ.push_back(index);
@@ -378,14 +459,14 @@ void* thdGetHttpContent(void* lparam)
 
 	curl_easy_cleanup(pCurl);
 
-	return nullptr;
+	return NULL;
 }
 
 int SaveToFile(const char* szSaveAs)
 {
 	char szName[128] = {0};
 
-	if (nullptr == szSaveAs)
+	if (NULL == szSaveAs)
 	{
 		srand(time(NULL));
 		int name = rand();
@@ -419,13 +500,15 @@ int SaveToFile(const char* szSaveAs)
 	return 0;
 }
 
-int Process(const char* szURI, const char* szSaveAs = nullptr)
+int Process(const char* szURI, const char* szSaveAs = NULL)
 {
+	contents.clear();
+
 	std::cout << "Processing: " << endl << szURI << endl;
 
 	logger(0, "%s\n%s", "processing: ", szURI);
 
-	if (nullptr == szURI)
+	if (NULL == szURI)
 	{
 		return -1;
 	}
@@ -453,19 +536,24 @@ int Process(const char* szURI, const char* szSaveAs = nullptr)
 
 	for (int cnt = 0; cnt < threadPoolSize; ++cnt)
 	{
-		pthread_create(&threadPool[cnt], nullptr, &thdGetHttpContent, (void*)szURI);
+		pthread_create(&threadPool[cnt], NULL, &thdGetHttpContent, (void*)szURI);
 	}
 
 	do 
 	{
 		float progress = ( (float)contents.size() / (float)nFrames ) * 100.0;
 		cout << progress << "% Complete" << endl;
+#if defined(_WIN32) || defined(_WIN64)
 		Sleep(1000);
+#else
+		sleep(1);
+#endif
+		
 	} while (contents.size() < nFrames);
 
 	cout << "100% Complete" << endl;
 
-	if (nullptr == szSaveAs)
+	if (NULL == szSaveAs)
 	{
 		char szName[128] = {0};
 		std::string s = szURI;
@@ -483,21 +571,21 @@ int Process(const char* szURI, const char* szSaveAs = nullptr)
 
 int main(int argc, char* argv[])
 {
-	google::InitGoogleLogging("hello");
+	google::InitGoogleLogging(argv[0]);
 	google::SetLogDestination(google::GLOG_INFO, "./Sylvia_");
 
-	pthread_rwlock_init(&taskQLock, nullptr);
+	pthread_rwlock_init(&taskQLock, NULL);
 
 #ifdef ASYNC_LOG
 	pthread_t thdLog;
-	pthread_create(&thdLog, nullptr, thdLogger, nullptr);
+	pthread_create(&thdLog, NULL, thdLogger, NULL);
 #endif
 
 #ifdef PRODUCT_RELEASE
 	switch(argc)
 	{
 	case 2:
-		Process(argv[1], nullptr);
+		Process(argv[1], NULL);
 		break;
 	case 3:
 		Process(argv[1], argv[2]);
@@ -512,16 +600,19 @@ int main(int argc, char* argv[])
 		break;
 	}
 #else
-// 	int cnt = 5;
-// 	while(--cnt)
 	{
 		taskQ.clear();
 		contents.clear();
 
 		cout << "================================= start: =================================" << endl;
-//		Process("http://optimate.dl.sourceforge.net/project/udt/udt/4.11/udt.sdk.4.11.tar.gz", nullptr);
-//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", nullptr);
-		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", nullptr);
+//		Process("http://optimate.dl.sourceforge.net/project/udt/udt/4.11/udt.sdk.4.11.tar.gz", NULL);
+//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", NULL);
+//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", NULL);
+//		Process("http://hiktest.qiniudn.com/416121732_1_21356938-1dd2-11b2-bb4c-8e6ad662b44e_105?e=1381494316&token=n65zehSHdyg9CDsgg4oHJgRPprWX1mexGg2tg9nR:pBwChU2yVUeu7H8juoDLppD1vFs=", "a");
+//		Process("http://mirrors.neusoft.edu.cn/ubuntu-releases//precise/ubuntu-12.04.3-server-amd64.iso", NULL);
+//		Process("http://softlayer-dal.dl.sourceforge.net/project/opencvlibrary/opencv-win/2.4.6/OpenCV-2.4.6.0.exe", NULL);
+//		Process("ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/9.2/FreeBSD-9.2-RELEASE-amd64-dvd1.iso", NULL);
+		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
 		cout << "================================= done:  =================================" << endl;
 	}
 #endif
