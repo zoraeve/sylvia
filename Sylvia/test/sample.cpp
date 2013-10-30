@@ -33,7 +33,10 @@ using namespace std;
 #endif
 
 #ifdef _LOG_WITH_LOG4CXX_
-#include "log4cxx"
+#endif
+
+#define _ADVANCED_
+#ifdef _ADVANCED_
 #endif
 
 #define interval 10
@@ -44,6 +47,16 @@ std::deque<int> taskQ;
 pthread_rwlock_t taskQLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_t threadPool[threadPoolSize];
 std::map<int, std::string> contents;
+const char* pSaveAs = NULL;
+
+typedef struct _content_ 
+{
+	unsigned int index;
+	std::string s;
+}content;
+std::deque<content> contentsQ;
+pthread_rwlock_t contentsQLock = PTHREAD_RWLOCK_INITIALIZER;
+unsigned int completeFlag = 0;
 
 bool bReady2Exit = false;
 
@@ -116,13 +129,81 @@ void logger(int level, const char* format, ...)
 #define LOG_FATAL(fmt, args...) logger(3, "<%s>\t<%d>\t<%s>,"fmt, __FILE__, __LINE__, __FUNCTION__, ##args)
 #endif
 
+void preallocation(const unsigned int size_in_bytes, const char* szFile)
+{
+	LOG_INFO("begin to preallocation");
+	if (NULL == szFile)
+	{
+		return ;
+	}
+
+	ofstream ofile;
+	ofile.open(szFile, ios::out | ios::binary);
+
+	const unsigned mBlock = 1024 * 1024;
+	std::string sm(mBlock, 0x0);
+
+	const unsigned kBlock = 4 * 1024;
+	std::string sk(kBlock, 0x0);
+	
+	int rst = size_in_bytes % mBlock;
+	std::string sr(rst, 0x0);
+
+	int seg = size_in_bytes / mBlock;
+
+	LOG_INFO("begin to preallocation");
+
+	for (int cnt = 0; cnt < seg; ++cnt)
+	{
+		ofile << sm;
+	}
+	ofile << sr;
+
+	ofile.flush();
+
+	ofile.close();
+
+	LOG_INFO("preallocation done");
+
+	return ;
+}
+
+void randomwrite(const char* szFile, const unsigned int pos, const char* szBuf, const unsigned int nSize)
+{
+	ofstream ofile;
+	ofile.open(szFile, ios::out | ios::binary );
+	ofile.seekp(pos, ios::beg);
+
+	ofile.write(szBuf, nSize);
+
+	ofile.flush();
+	ofile.close();
+	
+	return ;
+}
+
+void randomwrite(const char* szFile, const unsigned int pos, const std::string s)
+{
+	ofstream ofile;
+	ofile.open(szFile, ios::in | ios::out | ios::binary | ios::ate );
+	ofile.seekp(0, ios::beg);
+	ofile.seekp(pos, ios::beg);
+
+	ofile << s;
+
+	ofile.flush();
+	ofile.close();
+
+	return ;
+}
+
 // four threads per group
 // the num of groups based on pieces
 // if more than 10 pieces
 // use ooo;
 // two groups together
 // download and write to file directly
-void OutOfOrderexecution(int pieces)
+void OutOfOrderExecution(int pieces)
 {
 	if (10 >= pieces)
 	{
@@ -422,6 +503,7 @@ void* thdGetHttpContent(void* lparam)
 
 		char szRange[128] = {0};
 		sprintf(szRange, "%d-%d", index * segment, (index + 1) * segment - 1);
+		LOG_INFO("part: %d, range, %s", index, szRange);
 		curl_easy_setopt(pCurl, CURLOPT_RANGE, szRange);
 		curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &HttpContentHandler);
 		curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &sData);
@@ -435,7 +517,27 @@ void* thdGetHttpContent(void* lparam)
 
 			logger(0, "%s%d%s%f%s%f%s", "part ", index, " done, download size: ", size, "bytes, Avg speed: ", speed, "bytes-per-sec");
 
+#ifdef _ADVANCED_
+			content c;
+			c.index = index * segment;
+			c.s = sData;
+			++completeFlag;
+			nRet = pthread_rwlock_wrlock(&contentsQLock);
+			while(0 != nRet)
+			{
+#if defined(_WIN32) || defined(_WIN64)
+				Sleep(interval);
+#else
+				usleep(interval * 1000);
+#endif
+
+				nRet = pthread_rwlock_wrlock(&contentsQLock);
+			}
+			contentsQ.push_back(c);
+			pthread_rwlock_unlock(&contentsQLock);
+#else
 			contents[index] = sData;
+#endif
 		}
 		else
 		{
@@ -502,6 +604,7 @@ int SaveToFile(const char* szSaveAs)
 
 int Process(const char* szURI, const char* szSaveAs = NULL)
 {
+	pSaveAs = szSaveAs;
 	contents.clear();
 
 	std::cout << "Processing: " << endl << szURI << endl;
@@ -526,6 +629,10 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 //	logger(0, "%s%d", "http content length: ", nSize);
 	LOG_INFO("%s%d", "http content length: ", nSize);
 
+#ifdef _ADVANCED_
+	preallocation(nSize, szSaveAs);
+#endif
+
 	int nFrames = nSize / segment + 1;
 	for (int cnt = 0; cnt < nFrames; ++cnt)
 	{
@@ -539,6 +646,64 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 		pthread_create(&threadPool[cnt], NULL, &thdGetHttpContent, (void*)szURI);
 	}
 
+#ifdef _ADVANCED_
+	do 
+	{
+		float progress = ( (float)completeFlag / (float)nFrames ) * 100.0;
+		cout << progress << "% Complete" << endl;
+#if defined(_WIN32) || defined(_WIN64)
+		Sleep(100);
+#else
+		usleep(100 * 1000);
+#endif
+		pthread_rwlock_rdlock(&contentsQLock);
+		if (0 >= contentsQ.size())
+		{
+			pthread_rwlock_unlock(&contentsQLock);
+			continue;
+		}
+		pthread_rwlock_unlock(&contentsQLock);
+
+		int nRet = pthread_rwlock_wrlock(&contentsQLock);
+		if (0 != nRet)
+		{
+#if defined(_WIN32) || defined(_WIN64)
+			Sleep(interval);
+#else
+			usleep(interval * 1000);
+#endif
+			continue;
+		}
+		if (0 >= contentsQ.size())
+		{
+			pthread_rwlock_unlock(&contentsQLock);
+			break;
+		}
+		content c;
+		c = contentsQ.front();
+		contentsQ.pop_front();
+		pthread_rwlock_unlock(&contentsQLock);
+
+		randomwrite(szSaveAs, c.index, c.s);
+
+	} while (completeFlag < nFrames);
+
+	while(0 < contentsQ.size())
+	{
+		float progress = ( ((float)nFrames - (float)contentsQ.size() + 1.0) / (float)nFrames ) * 100.0;
+
+		content c;
+		c = contentsQ.front();
+		contentsQ.pop_front();
+		randomwrite(szSaveAs, c.index, c.s);
+
+		cout << progress << "% Complete" << endl;
+	}
+
+	cout << "100% Complete" << endl;
+
+	return 0;
+#else
 	do 
 	{
 		float progress = ( (float)contents.size() / (float)nFrames ) * 100.0;
@@ -548,7 +713,6 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 #else
 		sleep(1);
 #endif
-		
 	} while (contents.size() < nFrames);
 
 	cout << "100% Complete" << endl;
@@ -567,6 +731,8 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 		}
 	}
 	return SaveToFile(szSaveAs);
+
+#endif
 }
 
 int main(int argc, char* argv[])
@@ -575,6 +741,10 @@ int main(int argc, char* argv[])
 	google::SetLogDestination(google::GLOG_INFO, "./Sylvia_");
 
 	pthread_rwlock_init(&taskQLock, NULL);
+
+#ifdef _ADVANCED_
+	pthread_rwlock_init(&contentsQLock, NULL);
+#endif
 
 #ifdef ASYNC_LOG
 	pthread_t thdLog;
@@ -605,14 +775,14 @@ int main(int argc, char* argv[])
 		contents.clear();
 
 		cout << "================================= start: =================================" << endl;
-//		Process("http://optimate.dl.sourceforge.net/project/udt/udt/4.11/udt.sdk.4.11.tar.gz", NULL);
-//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", NULL);
-//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", NULL);
+//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", "QQ2013SP2.exe");
+		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", "VA_X_Setup2001.exe");
 //		Process("http://hiktest.qiniudn.com/416121732_1_21356938-1dd2-11b2-bb4c-8e6ad662b44e_105?e=1381494316&token=n65zehSHdyg9CDsgg4oHJgRPprWX1mexGg2tg9nR:pBwChU2yVUeu7H8juoDLppD1vFs=", "a");
 //		Process("http://mirrors.neusoft.edu.cn/ubuntu-releases//precise/ubuntu-12.04.3-server-amd64.iso", NULL);
 //		Process("http://softlayer-dal.dl.sourceforge.net/project/opencvlibrary/opencv-win/2.4.6/OpenCV-2.4.6.0.exe", NULL);
 //		Process("ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/9.2/FreeBSD-9.2-RELEASE-amd64-dvd1.iso", NULL);
-		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
+//		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
+//		Process("http://dlc.sun.com.edgesuite.net/netbeans/7.4/final/bundles/netbeans-7.4-windows.exe", NULL);
 		cout << "================================= done:  =================================" << endl;
 	}
 #endif
