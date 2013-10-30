@@ -35,10 +35,6 @@ using namespace std;
 #ifdef _LOG_WITH_LOG4CXX_
 #endif
 
-#define _ADVANCED_
-#ifdef _ADVANCED_
-#endif
-
 #define interval 10
 #define threadPoolSize 10
 #define segment (65535)
@@ -47,8 +43,10 @@ std::deque<int> taskQ;
 pthread_rwlock_t taskQLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_t threadPool[threadPoolSize];
 std::map<int, std::string> contents;
-const char* pSaveAs = NULL;
 
+#define _ADVANCED_
+#ifdef _ADVANCED_
+const char* pSaveAs = NULL;
 typedef struct _content_ 
 {
 	unsigned int index;
@@ -57,8 +55,11 @@ typedef struct _content_
 std::deque<content> contentsQ;
 pthread_rwlock_t contentsQLock = PTHREAD_RWLOCK_INITIALIZER;
 unsigned int completeFlag = 0;
-
+bool bAllComplete = false;
 bool bReady2Exit = false;
+pthread_t threadSaveToFile;
+#endif
+
 
 #define ASYNC_LOG
 #ifdef ASYNC_LOG
@@ -68,13 +69,17 @@ typedef struct _logUnit_
 	std::string logDetail;
 }logUnit;
 std::deque<_logUnit_> logQ;
+pthread_rwlock_t logQLock = PTHREAD_RWLOCK_INITIALIZER;
 
 void logger2(int level, std::string sLog)
 {
 	logUnit lu;
 	lu.level = level;
 	lu.logDetail = sLog;
+
+	pthread_rwlock_wrlock(&logQLock);
 	logQ.push_back(lu);
+	pthread_rwlock_unlock(&logQLock);
 
 	return ;
 }
@@ -281,8 +286,10 @@ void* thdLogger(void* lparam)
 	{
 		if (logQ.size())
 		{
+			pthread_rwlock_wrlock(&logQLock);
 			logUnit lu = logQ.front();
 			logQ.pop_front();
+			pthread_rwlock_unlock(&logQLock);
 			switch(lu.level)
 			{
 			case 0:
@@ -564,6 +571,52 @@ void* thdGetHttpContent(void* lparam)
 	return NULL;
 }
 
+void* thdSaveToFile(void* lparam)
+{
+	while(!bAllComplete)
+	{
+		while(contentsQ.size() > 0)
+		{
+			pthread_rwlock_rdlock(&contentsQLock);
+			if (0 >= contentsQ.size())
+			{
+				pthread_rwlock_unlock(&contentsQLock);
+				continue;
+			}
+			pthread_rwlock_unlock(&contentsQLock);
+
+			int nRet = pthread_rwlock_wrlock(&contentsQLock);
+			if (0 != nRet)
+			{
+#if defined(_WIN32) || defined(_WIN64)
+				Sleep(interval);
+#else
+				usleep(interval * 1000);
+#endif
+				continue;
+			}
+			if (0 >= contentsQ.size())
+			{
+				pthread_rwlock_unlock(&contentsQLock);
+				break;
+			}
+			content c;
+			c = contentsQ.front();
+			contentsQ.pop_front();
+			pthread_rwlock_unlock(&contentsQLock);
+
+			randomwrite(pSaveAs, c.index, c.s);
+		}
+#if defined(_WIN32) || defined(_WIN64)
+		Sleep(interval);
+#else
+		usleep(interval * 1000);
+#endif
+	}
+
+	return NULL;
+}
+
 int SaveToFile(const char* szSaveAs)
 {
 	char szName[128] = {0};
@@ -604,7 +657,10 @@ int SaveToFile(const char* szSaveAs)
 
 int Process(const char* szURI, const char* szSaveAs = NULL)
 {
+#ifdef _ADVANCED_
 	pSaveAs = szSaveAs;
+#endif
+	
 	contents.clear();
 
 	std::cout << "Processing: " << endl << szURI << endl;
@@ -647,46 +703,23 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 	}
 
 #ifdef _ADVANCED_
+	pthread_create(&threadSaveToFile, NULL, &thdSaveToFile, (void*)pSaveAs);
+
 	do 
 	{
 		float progress = ( (float)completeFlag / (float)nFrames ) * 100.0;
 		cout << progress << "% Complete" << endl;
 #if defined(_WIN32) || defined(_WIN64)
-		Sleep(100);
+		Sleep(1000);
 #else
-		usleep(100 * 1000);
+		sleep(1);
 #endif
-		pthread_rwlock_rdlock(&contentsQLock);
-		if (0 >= contentsQ.size())
-		{
-			pthread_rwlock_unlock(&contentsQLock);
-			continue;
-		}
-		pthread_rwlock_unlock(&contentsQLock);
-
-		int nRet = pthread_rwlock_wrlock(&contentsQLock);
-		if (0 != nRet)
-		{
-#if defined(_WIN32) || defined(_WIN64)
-			Sleep(interval);
-#else
-			usleep(interval * 1000);
-#endif
-			continue;
-		}
-		if (0 >= contentsQ.size())
-		{
-			pthread_rwlock_unlock(&contentsQLock);
-			break;
-		}
-		content c;
-		c = contentsQ.front();
-		contentsQ.pop_front();
-		pthread_rwlock_unlock(&contentsQLock);
-
-		randomwrite(szSaveAs, c.index, c.s);
-
 	} while (completeFlag < nFrames);
+
+	bAllComplete = true;
+
+	void* pRet;
+	pthread_join(threadSaveToFile, &pRet);
 
 	while(0 < contentsQ.size())
 	{
@@ -748,6 +781,7 @@ int main(int argc, char* argv[])
 
 #ifdef ASYNC_LOG
 	pthread_t thdLog;
+	pthread_rwlock_init(&logQLock, NULL);
 	pthread_create(&thdLog, NULL, thdLogger, NULL);
 #endif
 
@@ -776,12 +810,11 @@ int main(int argc, char* argv[])
 
 		cout << "================================= start: =================================" << endl;
 //		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", "QQ2013SP2.exe");
-		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", "VA_X_Setup2001.exe");
-//		Process("http://hiktest.qiniudn.com/416121732_1_21356938-1dd2-11b2-bb4c-8e6ad662b44e_105?e=1381494316&token=n65zehSHdyg9CDsgg4oHJgRPprWX1mexGg2tg9nR:pBwChU2yVUeu7H8juoDLppD1vFs=", "a");
+//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", "VA_X_Setup2001.exe");
 //		Process("http://mirrors.neusoft.edu.cn/ubuntu-releases//precise/ubuntu-12.04.3-server-amd64.iso", NULL);
 //		Process("http://softlayer-dal.dl.sourceforge.net/project/opencvlibrary/opencv-win/2.4.6/OpenCV-2.4.6.0.exe", NULL);
 //		Process("ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/9.2/FreeBSD-9.2-RELEASE-amd64-dvd1.iso", NULL);
-//		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
+		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
 //		Process("http://dlc.sun.com.edgesuite.net/netbeans/7.4/final/bundles/netbeans-7.4-windows.exe", NULL);
 		cout << "================================= done:  =================================" << endl;
 	}
