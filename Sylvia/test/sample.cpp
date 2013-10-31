@@ -136,7 +136,6 @@ void logger(int level, const char* format, ...)
 
 void preallocation(const unsigned int size_in_bytes, const char* szFile)
 {
-	LOG_INFO("begin to preallocation");
 	if (NULL == szFile)
 	{
 		return ;
@@ -144,6 +143,11 @@ void preallocation(const unsigned int size_in_bytes, const char* szFile)
 
 	ofstream ofile;
 	ofile.open(szFile, ios::out | ios::binary);
+	if (!ofile.is_open())
+	{
+		LOG_ERROR("Create File %s failed", szFile);
+		return ;
+	}
 
 	const unsigned mBlock = 1024 * 1024;
 	std::string sm(mBlock, 0x0);
@@ -748,7 +752,7 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 	LOG_INFO("%s%d", "http content length: ", nSize);
 
 #ifdef _ADVANCED_
-	preallocation(nSize, szSaveAs);
+	preallocation(nSize, szSaved);
 #endif
 
 	int nFrames = nSize / segment + 1;
@@ -859,11 +863,11 @@ int main(int argc, char* argv[])
 
 		cout << "================================= start: =================================" << endl;
 //		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", NULL);
-//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", NULL);
+		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", NULL);
 //		Process("http://mirrors.neusoft.edu.cn/ubuntu-releases//precise/ubuntu-12.04.3-server-amd64.iso", NULL);
 //		Process("http://softlayer-dal.dl.sourceforge.net/project/opencvlibrary/opencv-win/2.4.6/OpenCV-2.4.6.0.exe", NULL);
 //		Process("ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/9.2/FreeBSD-9.2-RELEASE-amd64-dvd1.iso", NULL);
-		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", NULL);
+//		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", NULL);
 //		Process("http://dlc.sun.com.edgesuite.net/netbeans/7.4/final/bundles/netbeans-7.4-windows.exe", NULL);
 //		Process("http://http.maxon.net/pub/benchmarks/CINEBENCH_R15.zip", NULL);
 //		Process("http://117.21.189.48/cdn.baidupcs.com/file/6949bf3029e81553a546e97d7348d77f?xcode=5e8e5a37e56cf86d041c91a25aa7cb673e1748317ed8c839&fid=1410197977-250528-949775881&time=1383189038&sign=FDTAXER-DCb740ccc5511e5e8fedcff06b081203-sW88WzuvvDGrLLQ125%2BAFUXOJVc%3D&to=cb&fm=N,B,T,t&expires=8h&rt=sh&r=985737545&logid=2522427617&sh=1&fn=%E5%95%83%E6%85%A2%E4%BA%8C.rar&wshc_tag=0&wsiphost=ipdbm", "abc");
