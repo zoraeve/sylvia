@@ -36,9 +36,12 @@ public:
 	bool busy;
 	LIBSYLVIA_TASK task;
 
-	pthread_t thread;
+	pthread_t tidWorker;
+	pthread_t tidSaveToFile;
 
 	float progress;
+	bool bComplete;
+	unsigned int finishedBlocks;
 
 public:
 	std::deque<int> taskQ;
@@ -46,6 +49,10 @@ public:
 	pthread_t threadPool[threadPoolSize];
 	std::map<int, std::string> contents;
 
+public:
+	std::deque<LIBSYLVIA_CONTENT> contentsQ;
+	pthread_rwlock_t contentsQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
+	
 public:
 	int GetHttpContentLength();
 	int SaveToFile(const char* szSaveAs);

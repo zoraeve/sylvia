@@ -106,6 +106,7 @@ copy /Y ..\public\bin\zlib1.dll ..\Release</Command>
   <ItemGroup>
     <ClCompile Include="libSylvia.cpp" />
     <ClCompile Include="libSylviaLogger.cpp" />
+    <ClCompile Include="libSylviaUtility.cpp" />
     <ClCompile Include="libSylvia_engine.cpp" />
   </ItemGroup>
   <ItemGroup>

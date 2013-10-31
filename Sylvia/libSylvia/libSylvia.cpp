@@ -55,7 +55,7 @@ void* libSylvia_maintain(void* lparam)
 #ifdef LIBSYLVIA_IN_WINDOWS
 			Sleep(10);
 #else
-			sleep(10);
+			usleep(10 * 1000);
 #endif
 		}
 	}
@@ -93,28 +93,9 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet(const char* szURI, const 
 	LIBSYLVIA_TASK task;
 	task.URI = szURI;
 
-	if (nullptr == szSaveAs)
-	{
-		std::string s = szURI;
-		if (std::string::npos == s.find("/"))
-		{
-			char szName[128] = {0};
-			srand(time(NULL));
-			int name = rand();
-			sprintf(szName, "%d.save", name);
-			task.SaveAs = szName;
-		}
-		else
-		{
-			task.SaveAs =s.substr(s.find_last_of("/") + 1).c_str();
-		}
-	}
-	else
-	{
-		task.SaveAs = szSaveAs;
-	}
+	libSylvia_guessWhat(szURI, task.SaveAs);
 
-	task.method = _LIBSYLVIA_METHOD_HTTP_;
+	task.Method = _LIBSYLVIA_METHOD_HTTP_;
 
 	libSylvia_taskQ.push_back(task);
 
@@ -126,7 +107,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet(const char* szURI, const
 	LIBSYLVIA_TASK task;
 	task.URI = szURI;
 	task.SaveAs = szSaveAs;
-	task.method = _LIBSYLVIA_METHOD_HTTPS_;
+	task.Method = _LIBSYLVIA_METHOD_HTTPS_;
 
 	libSylvia_taskQ.push_back(task);
 
@@ -138,7 +119,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet(const char* szURI, const c
 	LIBSYLVIA_TASK task;
 	task.URI = szURI;
 	task.SaveAs = szSaveAs;
-	task.method = _LIBSYLVIA_METHOD_FTP_;
+	task.Method = _LIBSYLVIA_METHOD_FTP_;
 
 	libSylvia_taskQ.push_back(task);
 
@@ -150,7 +131,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 	LIBSYLVIA_TASK task;
 	task.URI = szURI;
 	task.SaveAs = szSaveAs;
-	task.method = _LIBSYLVIA_METHOD_SFTP_;
+	task.Method = _LIBSYLVIA_METHOD_SFTP_;
 
 	libSylvia_taskQ.push_back(task);
 

@@ -25,9 +25,9 @@ unsigned int __stdcall demo(LPVOID lparam)
 
 		Sleep(1000);
 		
-		if (!(++cnt % 5))
+		if (++cnt == 1)
 		{
-			libSylvia_httpGet("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", nullptr);
+			libSylvia_httpGet("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP3/8548/QQ2013SP3.exe", nullptr);
 		}
 	}
 
