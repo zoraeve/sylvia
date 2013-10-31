@@ -31,6 +31,15 @@ unsigned int __stdcall demo(LPVOID lparam)
 		LIBSYLVIA_STATUS s = {0};
 		libSylvia_query(0, s);
 
+		if (s.currentProgress == 100.0)
+		{
+#ifdef __linux__
+			return NULL;
+#else
+			return 0;
+#endif
+		}
+
 #ifdef __linux__
 		sleep(1);
 #else
@@ -42,8 +51,11 @@ unsigned int __stdcall demo(LPVOID lparam)
 			libSylvia_httpGet("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP3/8548/QQ2013SP3.exe", NULL);
 		}
 	}
-
+#ifdef __linux__
+	return NULL;
+#else
 	return 0;
+#endif
 }
 
 int main()
@@ -54,17 +66,15 @@ int main()
 	pthread_t tid;
 	pthread_create(&tid, NULL, demo, NULL);
 #else
-	_beginthreadex(nullptr, 0, &demo, nullptr, 0, nullptr);
+	HANDLE h = (HANDLE)_beginthreadex(nullptr, 0, &demo, nullptr, 0, nullptr);
 #endif
 
-	while(1)
-	{
 #ifdef __linux__
-		sleep(10);
+		void* p;
+		pthread_join(tid, &p);
 #else
-		Sleep(10000);
+		WaitForSingleObject(h, INFINITE);
 #endif
-	}
 
 	libSylvia_fin();
 
