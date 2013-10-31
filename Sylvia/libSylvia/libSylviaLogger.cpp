@@ -36,6 +36,7 @@ bool libSylvia_logger_flag = true;
 pthread_t libSylvia_logger_thread;
 // pthread_cond_t libSylvia_logger_cond;
 // pthread_mutex_t libSylvia_logger_mutex;
+pthread_rwlock_t libSylvia_logger_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 void* logger(void* lparam)
 {
@@ -44,8 +45,10 @@ void* logger(void* lparam)
 		if (logQ.size())
 		{
 #ifdef GLOG_SUPPORT
+			pthread_rwlock_wrlock(&libSylvia_logger_lock);
 			logUnit lu = logQ.front();
 			logQ.pop_front();
+			pthread_rwlock_unlock(&libSylvia_logger_lock);
 
 			switch(lu.level)
 			{
@@ -97,6 +100,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_logger_ini(bool flag)
 // 	pthread_mutex_init(&libSylvia_logger_mutex, NULL);
 // 	pthread_cond_init(&libSylvia_logger_cond, NULL);
 
+	pthread_rwlock_init(&libSylvia_logger_lock, NULL);
+
 	pthread_create(&libSylvia_logger_thread, NULL, logger, NULL);
 
 	return 0;
@@ -132,7 +137,9 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_log(int level, const char* format
 		logUnit lu;
 		lu.level = level;
 		lu.logDetail = pBuf;
+		pthread_rwlock_wrlock(&libSylvia_logger_lock);
 		logQ.push_back(lu);
+		pthread_rwlock_unlock(&libSylvia_logger_lock);
 
 		delete[] pBuf;
 		pBuf = NULL;
