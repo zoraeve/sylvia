@@ -272,9 +272,9 @@ void* worker(void* lparam)
 #endif
 		cout << p->progress << "% Complete" << endl;
 #ifdef LIBSYLVIA_IN_WINDOWS
-		Sleep(LIBSYLVIA_INTERVAL);
+		Sleep(1000);
 #elif defined LIBSYLVIA_IN_LINUX
-		usleep(LIBSYLVIA_INTERVAL);
+		sleep(1);
 #endif
 	} while (p->contents.size() < nFrames);
 
