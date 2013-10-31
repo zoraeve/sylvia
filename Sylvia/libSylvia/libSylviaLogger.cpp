@@ -1,4 +1,5 @@
 #include "libSylviaLogger.h"
+#include "libSylviaUtility.h"
 
 #include <iostream>
 #include <deque>
@@ -6,16 +7,23 @@
 
 #ifdef LIBSYLVIA_IN_WINDOWS
 #include <Windows.h>
-#endif
-
 #ifdef GLOG_SUPPORT
 #define GLOG_NO_ABBREVIATED_SEVERITIES
 #include <glog/logging.h>
 #pragma comment(lib, "libglog.lib")
 #endif
-
 #include <pthread.h>
 #pragma comment(lib, "pthreadVC2.lib")
+#elif defined LIBSYLVIA_IN_LINUX
+#include "pthread.h"
+#include "glog/logging.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 
 typedef struct _logUnit_
 {
@@ -65,16 +73,16 @@ void* logger(void* lparam)
 			{
 				//pthread_cond_timedwait();
 #ifdef LIBSYLVIA_IN_WINDOWS
-				Sleep(10);
-#else
-				sleep(10);
+				Sleep(LIBSYLVIA_INTERVAL);
+#elif defined LIBSYLVIA_IN_LINUX
+				usleep(LIBSYLVIA_INTERVAL);
 #endif
 				continue;
 			}
 			break;
 		}
 	}
-	return nullptr;
+	return NULL;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_logger_ini(bool flag)
@@ -86,10 +94,10 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_logger_ini(bool flag)
 
 	libSylvia_logger_flag = flag;
 
-// 	pthread_mutex_init(&libSylvia_logger_mutex, nullptr);
-// 	pthread_cond_init(&libSylvia_logger_cond, nullptr);
+// 	pthread_mutex_init(&libSylvia_logger_mutex, NULL);
+// 	pthread_cond_init(&libSylvia_logger_cond, NULL);
 
-	pthread_create(&libSylvia_logger_thread, nullptr, logger, nullptr);
+	pthread_create(&libSylvia_logger_thread, NULL, logger, NULL);
 
 	return 0;
 }
@@ -127,7 +135,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_log(int level, const char* format
 		logQ.push_back(lu);
 
 		delete[] pBuf;
-		pBuf = nullptr;
+		pBuf = NULL;
 	}
 	catch (...)
 	{

@@ -1,20 +1,26 @@
 #include "libSylvia.h"
 #include "libSylviaUtility.h"
 #include "libSylviaLogger.h"
+#include "libSylvia_engine.h"
 
 #include <string>
 #include <deque>
-
-#include <pthread.h>
-#pragma comment(lib, "pthreadVC2.lib")
-
-#include "libSylvia_engine.h"
+#include <time.h>
 
 #ifdef LIBSYLVIA_IN_WINDOWS
+#include <pthread.h>
 #include <Windows.h>
+#elif defined LIBSYLVIA_IN_LINUX
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "pthread.h"
 #endif
 
-#include <time.h>
+#ifdef LIBSYLVIA_IN_WINDOWS
+#pragma comment(lib, "pthreadVC2.lib")
+#endif
+
 
 std::deque<LIBSYLVIA_TASK> libSylvia_taskQ;
 pthread_t libSylvia_thread;
@@ -25,9 +31,9 @@ libSylvia_engine* libSylvia_Engine;
 
 void* libSylvia_maintain(void* lparam)
 {
-	if (lparam == nullptr)
+	if (NULL == lparam)
 	{
-		return nullptr;
+		return NULL;
 	}
 	libSylvia_engine* pEngine = reinterpret_cast<libSylvia_engine*>(lparam);
 
@@ -36,9 +42,9 @@ void* libSylvia_maintain(void* lparam)
 		if (pEngine->bBusy())
 		{
 #ifdef LIBSYLVIA_IN_WINDOWS
-			Sleep(10);
-#else
-			sleep(10);
+			Sleep(LIBSYLVIA_INTERVAL);
+#elif defined LIBSYLVIA_IN_LINUX
+			usleep(LIBSYLVIA_INTERVAL);
 #endif
 			continue;
 		}
@@ -53,16 +59,16 @@ void* libSylvia_maintain(void* lparam)
 		else
 		{
 #ifdef LIBSYLVIA_IN_WINDOWS
-			Sleep(10);
-#else
-			usleep(10 * 1000);
+			Sleep(LIBSYLVIA_INTERVAL);
+#elif defined LIBSYLVIA_IN_LINUX
+			usleep(LIBSYLVIA_INTERVAL);
 #endif
 		}
 	}
 
 	pEngine->cleanup();
 
-	return nullptr;
+	return NULL;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
@@ -72,7 +78,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
 
 	libSylvia_logger_ini(libSylvia_exit);
 
-	pthread_create(&libSylvia_thread, nullptr, &libSylvia_maintain, (void*)libSylvia_Engine);
+	pthread_create(&libSylvia_thread, NULL, &libSylvia_maintain, (void*)libSylvia_Engine);
 
 	return 0;
 }

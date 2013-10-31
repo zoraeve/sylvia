@@ -7,6 +7,12 @@
 #include <fstream>
 using namespace std;
 
+#ifdef LIBSYLVIA_IN_LINUX
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 int libSylvia_guessWhat(const char* szURI, std::string& sSavedAs)
 {
 	std::string sURI(szURI);

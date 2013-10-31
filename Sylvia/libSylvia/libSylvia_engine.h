@@ -11,12 +11,12 @@
 #include <map>
 using namespace std;
 
+#ifdef LIBSYLVIA_IN_WINDOWS
 #include <pthread.h>
 #pragma comment(lib, "pthreadVC2.lib")
-
-#define interval 10
-#define threadPoolSize 10
-#define segment (1024 * 1024)
+#elif defined LIBSYLVIA_IN_LINUX
+#include "pthread.h"
+#endif
 
 class libSylvia_engine
 {
@@ -46,7 +46,7 @@ public:
 public:
 	std::deque<int> taskQ;
 	pthread_rwlock_t taskQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
-	pthread_t threadPool[threadPoolSize];
+	pthread_t threadPool[LIBSLYVIA_THREADPOOLSIZE];
 	std::map<int, std::string> contents;
 
 public:

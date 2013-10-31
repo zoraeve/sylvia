@@ -1,4 +1,5 @@
 #pragma once
+#include "libSylvia.h"
 
 #include <string>
 
@@ -23,6 +24,15 @@ typedef struct _LIBSYLVIA_CONTENT_
 	unsigned int index;
 	std::string sData;
 }LIBSYLVIA_CONTENT;
+
+#ifdef LIBSYLVIA_IN_WINDOWS
+#define LIBSYLVIA_INTERVAL 10
+#elif defined LIBSYLVIA_IN_LINUX
+#define LIBSYLVIA_INTERVAL (10 * 1000)
+#endif
+
+#define LIBSLYVIA_THREADPOOLSIZE 10
+#define LIBSYLVIA_SEGMENTSIZE (1024 * 1024)
 
 
 #define LIBSYLVIA_BLOCK_4K (4 * 1024)
