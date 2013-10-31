@@ -36,7 +36,7 @@ using namespace std;
 #endif
 
 #define interval 10
-#define threadPoolSize 10
+#define threadPoolSize 20
 #define segment (65535)
 
 std::deque<int> taskQ;
@@ -655,13 +655,75 @@ int SaveToFile(const char* szSaveAs)
 	return 0;
 }
 
+void GuessWhat(const char* szURI, char* szSaveAs)
+{
+	std::string s(szURI);
+
+	int slash_pos = s.find_last_of('/');
+	if (std::string::npos == slash_pos)
+	{
+		srand(time(NULL));
+		int name = rand();
+
+		sprintf(szSaveAs, "%d.save", name);
+
+		return ;
+	}
+
+	s = s.substr(slash_pos + 1);
+
+	int dot_pos = s.find_last_of('.');
+	if (std::string::npos == dot_pos)
+	{
+		srand(time(NULL));
+		int name = rand();
+
+		sprintf(szSaveAs, "%d.save", name);
+
+		return ;
+	}
+
+	std::string sName = s.substr(0, dot_pos);
+	s = s.substr(dot_pos + 1);
+
+	std::string::iterator iter = s.begin();
+	for ( ; iter != s.end(); ++iter)
+	{
+		if ((*iter >= 48 && *iter <= 57) || (*iter >= 65 && *iter <= 90) || (*iter >= 97 && *iter <= 122))
+		{
+			continue;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	std::string sExt = (s.end() == iter) ? s : s.substr(0, s.find_first_of(*iter));
+
+	sprintf(szSaveAs, "%s.%s", sName.c_str(), sExt.c_str());
+
+	return ;
+}
+
 int Process(const char* szURI, const char* szSaveAs = NULL)
 {
+	char szSaved[128] = {0};
+	if (NULL == szSaveAs)
+	{
+		GuessWhat(szURI, szSaved);
+	}
+	else
+	{
+		strncpy(szSaved, szSaveAs, ((strlen(szSaveAs) <= 127) ? strlen(szSaveAs) : 127));
+	}
+
 #ifdef _ADVANCED_
-	pSaveAs = szSaveAs;
-#endif
-	
+	pSaveAs = szSaved;
+	contentsQ.clear();
+#else
 	contents.clear();
+#endif
 
 	std::cout << "Processing: " << endl << szURI << endl;
 
@@ -750,20 +812,7 @@ int Process(const char* szURI, const char* szSaveAs = NULL)
 
 	cout << "100% Complete" << endl;
 
-	if (NULL == szSaveAs)
-	{
-		char szName[128] = {0};
-		std::string s = szURI;
-		if (std::string::npos == s.find("/"))
-		{
-			return SaveToFile(szURI);
-		}
-		else
-		{
-			return SaveToFile(s.substr(s.find_last_of("/") + 1).c_str());
-		}
-	}
-	return SaveToFile(szSaveAs);
+	return SaveToFile(szSaved);
 
 #endif
 }
@@ -809,13 +858,15 @@ int main(int argc, char* argv[])
 		contents.clear();
 
 		cout << "================================= start: =================================" << endl;
-//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", "QQ2013SP2.exe");
-//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", "VA_X_Setup2001.exe");
+//		Process("http://dldir1.qq.com/qqfile/qq/QQ2013/QQ2013SP2/8178/QQ2013SP2.exe", NULL);
+//		Process("http://www.wholetomato.com/binaries/VA_X_Setup2001.exe", NULL);
 //		Process("http://mirrors.neusoft.edu.cn/ubuntu-releases//precise/ubuntu-12.04.3-server-amd64.iso", NULL);
 //		Process("http://softlayer-dal.dl.sourceforge.net/project/opencvlibrary/opencv-win/2.4.6/OpenCV-2.4.6.0.exe", NULL);
 //		Process("ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/9.2/FreeBSD-9.2-RELEASE-amd64-dvd1.iso", NULL);
-		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", "ubuntukylin-13.10-desktop-amd64.iso");
+		Process("http://d3jaqrkr4poi5w.cloudfront.net/ubuntukylin-13.10-desktop-amd64.iso?distro=desktop&release=latest&bits=64", NULL);
 //		Process("http://dlc.sun.com.edgesuite.net/netbeans/7.4/final/bundles/netbeans-7.4-windows.exe", NULL);
+//		Process("http://http.maxon.net/pub/benchmarks/CINEBENCH_R15.zip", NULL);
+//		Process("http://117.21.189.48/cdn.baidupcs.com/file/6949bf3029e81553a546e97d7348d77f?xcode=5e8e5a37e56cf86d041c91a25aa7cb673e1748317ed8c839&fid=1410197977-250528-949775881&time=1383189038&sign=FDTAXER-DCb740ccc5511e5e8fedcff06b081203-sW88WzuvvDGrLLQ125%2BAFUXOJVc%3D&to=cb&fm=N,B,T,t&expires=8h&rt=sh&r=985737545&logid=2522427617&sh=1&fn=%E5%95%83%E6%85%A2%E4%BA%8C.rar&wshc_tag=0&wsiphost=ipdbm", "abc");
 		cout << "================================= done:  =================================" << endl;
 	}
 #endif
@@ -833,3 +884,4 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
