@@ -31,25 +31,38 @@ typedef struct _logUnit_
 	std::string logDetail;
 }logUnit;
 std::deque<_logUnit_> logQ;
+pthread_rwlock_t libSylvia_logger_logQlock = PTHREAD_RWLOCK_INITIALIZER;
 
 bool libSylvia_logger_flag = true;
 pthread_t libSylvia_logger_thread;
-// pthread_cond_t libSylvia_logger_cond;
-// pthread_mutex_t libSylvia_logger_mutex;
-pthread_rwlock_t libSylvia_logger_lock = PTHREAD_RWLOCK_INITIALIZER;
+
 
 void* logger(void* lparam)
 {
 	while(1)
 	{
+		pthread_rwlock_rdlock(&libSylvia_logger_logQlock);
 		if (logQ.size())
 		{
-#ifdef GLOG_SUPPORT
-			pthread_rwlock_wrlock(&libSylvia_logger_lock);
+			pthread_rwlock_unlock(&libSylvia_logger_logQlock);
+
+			int nRet = pthread_rwlock_wrlock(&libSylvia_logger_logQlock);
+			if (0 != nRet)
+			{
+				continue;
+			}
+
+			if (0 >= logQ.size())
+			{
+				pthread_rwlock_unlock(&libSylvia_logger_logQlock);
+				continue;
+			}
+
 			logUnit lu = logQ.front();
 			logQ.pop_front();
-			pthread_rwlock_unlock(&libSylvia_logger_lock);
+			pthread_rwlock_unlock(&libSylvia_logger_logQlock);
 
+#ifdef GLOG_SUPPORT
 			switch(lu.level)
 			{
 			case 0:
@@ -74,7 +87,6 @@ void* logger(void* lparam)
 		{
 			if (!libSylvia_logger_flag)
 			{
-				//pthread_cond_timedwait();
 				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				continue;
 			}
@@ -93,10 +105,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_logger_ini(bool flag)
 
 	libSylvia_logger_flag = flag;
 
-// 	pthread_mutex_init(&libSylvia_logger_mutex, NULL);
-// 	pthread_cond_init(&libSylvia_logger_cond, NULL);
-
-	pthread_rwlock_init(&libSylvia_logger_lock, NULL);
+	pthread_rwlock_init(&libSylvia_logger_logQlock, NULL);
 
 	pthread_create(&libSylvia_logger_thread, NULL, logger, NULL);
 
@@ -133,9 +142,14 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_log(int level, const char* format
 		logUnit lu;
 		lu.level = level;
 		lu.logDetail = pBuf;
-		pthread_rwlock_wrlock(&libSylvia_logger_lock);
+		int nRet = pthread_rwlock_wrlock(&libSylvia_logger_logQlock);
+		while(0 != nRet)
+		{
+			libSylvia_sleep(LIBSYLVIA_INTERVAL);
+			nRet = pthread_rwlock_wrlock(&libSylvia_logger_logQlock);
+		}
 		logQ.push_back(lu);
-		pthread_rwlock_unlock(&libSylvia_logger_lock);
+		pthread_rwlock_unlock(&libSylvia_logger_logQlock);
 
 		delete[] pBuf;
 		pBuf = NULL;

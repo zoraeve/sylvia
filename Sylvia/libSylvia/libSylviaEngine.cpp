@@ -288,7 +288,7 @@ int libSylviaEngine::cleanup()
 
 int libSylviaEngine::GetHttpContentLength()
 {
-	LIBSYLVIA_LOG_INFO("%s\n%s", "get content length for: ", task.URI.c_str());
+	LIBSYLVIA_LOG_INFO("get content length for: %s", task.URI.c_str());
 
 	if (0 == task.URI.length())
 	{
@@ -318,8 +318,6 @@ int libSylviaEngine::GetHttpContentLength()
 	CURLcode cRet = curl_easy_perform(pCurl);
 	if (CURLE_OK == cRet)
 	{
-		LIBSYLVIA_LOG_INFO("Get Http Head Done");
-
 		int pos = sHeader.find("Content-Length: ");
 		if (std::string::npos != pos)
 		{
@@ -328,6 +326,7 @@ int libSylviaEngine::GetHttpContentLength()
 			if (std::string::npos != pos)
 			{
 				curl_easy_cleanup(pCurl);
+				LIBSYLVIA_LOG_INFO("Get Http Head Done");
 				return atoi(sTmp.substr(0, pos).c_str());
 			}
 			else
