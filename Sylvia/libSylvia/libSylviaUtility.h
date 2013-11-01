@@ -22,12 +22,12 @@ typedef enum _LIBSYLVIA_METHOD_
 
 typedef enum _LIBSYLVIA_TASK_STATUS_
 {
-	_LIBSYLVIA_STATUS_UNKNOWN_ = 0,
-	_LIBSYLVIA_STATUS_PAUSED_ = 1,
-	_LIBSYLVIA_STATUS_WAITING_ = 2,
-	_LIBSYLVIA_STATUS_RUNNING_ = 3,
-	_LIBSYLVIA_STATUS_CANCELED_ = 4,
-	_LIBSYLVIA_STATUS_DONE_ = 5
+	_LIBSYLVIA_STATUS_TASK_UNKNOWN_ = 0,
+	_LIBSYLVIA_STATUS_TASK_PAUSED_ = 1,
+	_LIBSYLVIA_STATUS_TASK_WAITING_ = 2,
+	_LIBSYLVIA_STATUS_TASK_RUNNING_ = 3,
+	_LIBSYLVIA_STATUS_TASK_CANCELED_ = 4,
+	_LIBSYLVIA_STATUS_TASK_DONE_ = 5
 }LIBSYLVIA_TASK_STATUS;
 
 typedef struct _LIBSYLVIA_CONTENT_ 
@@ -46,12 +46,47 @@ typedef struct _LIBSYLVIA_TASK_
 	float DownloadSize;
 	LIBSYLVIA_METHOD Method;
 	LIBSYLVIA_TASK_STATUS Status;
+	pthread_rwlock_t ContentsQLock;
+	pthread_rwlock_t TaskQLock;
 	std::string URI;
 	std::string SaveAs;
 	std::deque<int> TaskQ;
-	pthread_rwlock_t TaskQLock;
 	std::deque<LIBSYLVIA_CONTENT> ContentsQ;
-	pthread_rwlock_t ContentsQLock;
+
+	_LIBSYLVIA_TASK_()
+	{
+		URI = "";
+		SaveAs = "";
+		Method = _LIBSYLVIA_METHOD_UNKNOWN_;
+		TaskQ.clear();
+		ContentsQ.clear();
+		CompleteParts = 0;
+		DownloadSize = 0;
+		DownloadSpeed = 0;
+		Progress = 0;
+		TotalFrames = 0;
+		TotolSize = 0;
+		Status = _LIBSYLVIA_STATUS_TASK_UNKNOWN_;
+
+		pthread_rwlock_init(&TaskQLock, NULL);
+		pthread_rwlock_init(&ContentsQLock, NULL);
+	}
+
+	~_LIBSYLVIA_TASK_()
+	{
+		URI = "";
+		SaveAs = "";
+		Method = _LIBSYLVIA_METHOD_UNKNOWN_;
+		TaskQ.clear();
+		ContentsQ.clear();
+		CompleteParts = 0;
+		DownloadSize = 0;
+		DownloadSpeed = 0;
+		Progress = 0;
+		TotalFrames = 0;
+		TotolSize = 0;
+		Status = _LIBSYLVIA_STATUS_TASK_UNKNOWN_;
+	}
 }LIBSYLVIA_TASK;
 
 #define LIBSYLVIA_INTERVAL 10 * 1000 // 10'000 microseconds

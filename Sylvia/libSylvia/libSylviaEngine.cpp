@@ -53,7 +53,7 @@ void* thdGetHttpContent(void* lparam)
 	{
 		return NULL;
 	}
-	libSylvia_engine* p = reinterpret_cast<libSylvia_engine*>(lparam);
+	libSylviaEngine* p = reinterpret_cast<libSylviaEngine*>(lparam);
 
 	CURL* pCurl = NULL;
 	pCurl = curl_easy_init();
@@ -159,18 +159,13 @@ void* thdSaveToFile(void* lparam)
 	{
 		return NULL;
 	}
-	libSylvia_engine* p = reinterpret_cast<libSylvia_engine*>(lparam);
+	libSylviaEngine* p = reinterpret_cast<libSylviaEngine*>(lparam);
 
 	while(p->task.CompleteParts != p->task.TotalFrames)
 	{
-		while(p->task.ContentsQ.size() > 0)
+		pthread_rwlock_rdlock(&p->task.ContentsQLock);
+		if(p->task.ContentsQ.size() > 0)
 		{
-			pthread_rwlock_rdlock(&p->task.ContentsQLock);
-			if (0 >= p->task.ContentsQ.size())
-			{
-				pthread_rwlock_unlock(&p->task.ContentsQLock);
-				continue;
-			}
 			pthread_rwlock_unlock(&p->task.ContentsQLock);
 
 			int nRet = pthread_rwlock_wrlock(&p->task.ContentsQLock);
@@ -182,7 +177,8 @@ void* thdSaveToFile(void* lparam)
 			if (0 >= p->task.ContentsQ.size())
 			{
 				pthread_rwlock_unlock(&p->task.ContentsQLock);
-				break;
+				libSylvia_sleep(LIBSYLVIA_INTERVAL);
+				continue;
 			}
 			LIBSYLVIA_CONTENT c;
 			c = p->task.ContentsQ.front();
@@ -191,6 +187,11 @@ void* thdSaveToFile(void* lparam)
 
 			libSylvia_randomWrite(p->task.SaveAs.c_str(), c.index, c.sData);
 		}
+		else
+		{
+			pthread_rwlock_unlock(&p->task.ContentsQLock);
+		}
+
 		libSylvia_sleep(LIBSYLVIA_INTERVAL);
 	}
 
@@ -203,7 +204,7 @@ void* worker(void* lparam)
 	{
 		return NULL;
 	}
-	libSylvia_engine* p = reinterpret_cast<libSylvia_engine*>(lparam);
+	libSylviaEngine* p = reinterpret_cast<libSylviaEngine*>(lparam);
 
 	if (0 == p->task.URI.length())
 	{
@@ -211,13 +212,11 @@ void* worker(void* lparam)
 	}
 
 	p->task.TotolSize = p->GetHttpContentLength();
-
 	if (0 >= p->task.TotolSize)
 	{
 		LIBSYLVIA_LOG_ERROR("get http content length error");
 		return NULL;
 	}
-
 	LIBSYLVIA_LOG_INFO("%s%d", "http content length: ", p->task.TotolSize);
 
 	libSylvia_preAllocation(p->task.TotolSize, p->task.SaveAs.c_str());
@@ -227,19 +226,15 @@ void* worker(void* lparam)
 	{
 		p->task.TaskQ.push_back(cnt);
 	}
-
 	LIBSYLVIA_LOG_INFO("%s%d%s", "Split to ", p->task.TotalFrames, " pieces");
-
-	p->task.Progress = 0.0f;
 
 	for (int cnt = 0; cnt < LIBSLYVIA_THREADPOOLSIZE; ++cnt)
 	{
 		pthread_create(&p->threadPool[cnt], NULL, &thdGetHttpContent, lparam);
 	}
-
 	pthread_create(&p->tidSaveToFile, NULL, &thdSaveToFile, lparam);
 
-	do 
+	while (p->task.CompleteParts < p->task.TotalFrames)
 	{
 		p->task.Progress = ((float)(p->task.CompleteParts) / (float)(p->task.TotalFrames)) * 100.00;
 #ifdef _DEBUG
@@ -248,7 +243,7 @@ void* worker(void* lparam)
 		LIBSYLVIA_LOG_INFO("%f Complete", p->task.Progress);
 #endif
 		libSylvia_sleep(LIBSYLVIA_INTERVAL * 100);
-	} while (p->task.CompleteParts < p->task.TotalFrames);
+	}
 
 	void* pRet = NULL;
 	pthread_join(p->tidSaveToFile, &pRet);
@@ -269,23 +264,15 @@ void* worker(void* lparam)
 	return NULL;
 }
 
-libSylvia_engine::libSylvia_engine(void)
-{
-	task.URI = "";
-	task.SaveAs = "";
-	task.Method = _LIBSYLVIA_METHOD_UNKNOWN_;
-	task.TaskQ.clear();
-	task.ContentsQ.clear();
-
-	pthread_rwlock_init(&task.TaskQLock, NULL);
-	pthread_rwlock_init(&task.ContentsQLock, NULL);
-}
-
-libSylvia_engine::~libSylvia_engine(void)
+libSylviaEngine::libSylviaEngine(void)
 {
 }
 
-int libSylvia_engine::AddTask( LIBSYLVIA_TASK& t )
+libSylviaEngine::~libSylviaEngine(void)
+{
+}
+
+int libSylviaEngine::AddTask( LIBSYLVIA_TASK& t )
 {
 	task = t;
 
@@ -294,12 +281,12 @@ int libSylvia_engine::AddTask( LIBSYLVIA_TASK& t )
 	return 0;
 }
 
-int libSylvia_engine::cleanup()
+int libSylviaEngine::cleanup()
 {
 	return 0;
 }
 
-int libSylvia_engine::GetHttpContentLength()
+int libSylviaEngine::GetHttpContentLength()
 {
 	LIBSYLVIA_LOG_INFO("%s\n%s", "get content length for: ", task.URI.c_str());
 
@@ -315,7 +302,6 @@ int libSylvia_engine::GetHttpContentLength()
 		LIBSYLVIA_LOG_ERROR("curl_easy_init failed");
 		return -2;
 	}
-
 	curl_easy_reset(pCurl);
 
 	std::string sHeader;
@@ -328,7 +314,6 @@ int libSylvia_engine::GetHttpContentLength()
 	curl_easy_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, 30);
 	curl_easy_setopt(pCurl, CURLOPT_HEADERFUNCTION, &thdHttpHeaderHandler);
 	curl_easy_setopt(pCurl, CURLOPT_WRITEHEADER, &sHeader);
-
 
 	CURLcode cRet = curl_easy_perform(pCurl);
 	if (CURLE_OK == cRet)
@@ -367,7 +352,7 @@ int libSylvia_engine::GetHttpContentLength()
 	}
 }
 
-int libSylvia_engine::query(LIBSYLVIA_STATUS& status)
+int libSylviaEngine::query(LIBSYLVIA_STATUS& status)
 {
 	strncpy(status.szCurrentURI, task.URI.c_str(), task.URI.length());
 	strncpy(status.szCurrentSaveAs, task.SaveAs.c_str(), task.SaveAs.length());
@@ -376,7 +361,7 @@ int libSylvia_engine::query(LIBSYLVIA_STATUS& status)
 	return 0;
 }
 
-int libSylvia_engine::cancel()
+int libSylviaEngine::cancel()
 {
 	return 0;
 }

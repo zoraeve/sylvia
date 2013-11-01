@@ -27,7 +27,7 @@ int libSylvia_guessWhat(const char* szURI, std::string& sSavedAs)
 		int name = rand();
 
 		stringstream ss;
-		ss << name;
+		ss << name << ".save";
 		sSavedAs = ss.str();
 
 		return 1;
@@ -42,7 +42,7 @@ int libSylvia_guessWhat(const char* szURI, std::string& sSavedAs)
 		int name = rand();
 
 		stringstream ss;
-		ss << name;
+		ss << name << ".save";
 		sSavedAs = ss.str();
 
 		return 2;

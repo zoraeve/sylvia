@@ -27,7 +27,7 @@ pthread_rwlock_t libSylvia_taskQLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_t libSylvia_thread;
 bool libSylvia_exit = true;
 
-libSylvia_engine* libSylvia_Engine; 
+libSylviaEngine* libSylvia_engine; 
 
 void* libSylvia_maintain(void* lparam)
 {
@@ -35,7 +35,7 @@ void* libSylvia_maintain(void* lparam)
 	{
 		return NULL;
 	}
-	libSylvia_engine* pEngine = reinterpret_cast<libSylvia_engine*>(lparam);
+	libSylviaEngine* pEngine = reinterpret_cast<libSylviaEngine*>(lparam);
 
 	while(!libSylvia_exit)
 	{
@@ -82,12 +82,12 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_AddTask(const LIBSYLVIA_TASK& tas
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
 {
-	libSylvia_Engine = new libSylvia_engine();
+	libSylvia_engine = new libSylviaEngine();
 	libSylvia_exit = false;
 
 	libSylvia_logger_ini(libSylvia_exit);
 
-	pthread_create(&libSylvia_thread, NULL, &libSylvia_maintain, (void*)libSylvia_Engine);
+	pthread_create(&libSylvia_thread, NULL, &libSylvia_maintain, (void*)libSylvia_engine);
 
 	return 0;
 }
@@ -98,7 +98,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin()
 
 	libSylvia_logger_fin(libSylvia_exit);
 
-	delete libSylvia_Engine;
+	delete libSylvia_engine;
 
 	return 0;
 }
@@ -112,7 +112,6 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet(const char* szURI, const 
 
 	task.Method = _LIBSYLVIA_METHOD_HTTP_;
 
-//	libSylvia_taskQ.push_back(task);
 	libSylvia_AddTask(task);
 
 	return 0;
@@ -125,7 +124,6 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet(const char* szURI, const
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_HTTPS_;
 
-//	libSylvia_taskQ.push_back(task);
 	libSylvia_AddTask(task);
 
 	return 0;
@@ -138,7 +136,6 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet(const char* szURI, const c
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_FTP_;
 
-//	libSylvia_taskQ.push_back(task);
 	libSylvia_AddTask(task);
 
 	return 0;
@@ -151,7 +148,6 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_SFTP_;
 
-//	libSylvia_taskQ.push_back(task);
 	libSylvia_AddTask(task);
 
 	return 0;
@@ -159,7 +155,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const int index, LIBSYLVIA_STATUS& status)
 {
-	libSylvia_Engine->query(status);
+	libSylvia_engine->query(status);
 
 	status.nRemainTasks = libSylvia_taskQ.size();
 
@@ -178,7 +174,7 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const int index)
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const int index)
 {
-	libSylvia_Engine->cancel();
+	libSylvia_engine->cancel();
 
 	return 0;
 }

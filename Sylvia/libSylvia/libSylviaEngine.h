@@ -18,11 +18,11 @@ using namespace std;
 #include "pthread.h"
 #endif
 
-class libSylvia_engine
+class libSylviaEngine
 {
 public:
-	libSylvia_engine(void);
-	~libSylvia_engine(void);
+	libSylviaEngine(void);
+	~libSylviaEngine(void);
 
 public:
 	std::string currentURI;
