@@ -266,10 +266,12 @@ void* worker(void* lparam)
 
 libSylviaEngine::libSylviaEngine(void)
 {
+	curl_global_init(CURL_GLOBAL_ALL);
 }
 
 libSylviaEngine::~libSylviaEngine(void)
 {
+	curl_global_cleanup();
 }
 
 int libSylviaEngine::AddTask( LIBSYLVIA_TASK& t )
