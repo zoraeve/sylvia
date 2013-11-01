@@ -58,7 +58,7 @@ unsigned int __stdcall demo(LPVOID lparam)
 #endif
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 	libSylvia_ini();
 
