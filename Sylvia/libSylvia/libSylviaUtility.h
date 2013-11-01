@@ -4,6 +4,13 @@
 #include <string>
 #include <deque>
 
+#ifdef LIBSYLVIA_IN_WINDOWS
+#include <pthread.h>
+#pragma comment(lib, "pthreadVC2.lib")
+#elif defined LIBSYLVIA_IN_LINUX
+#include "pthread.h"
+#endif
+
 typedef enum _LIBSYLVIA_METHOD_
 {
 	_LIBSYLVIA_METHOD_UNKNOWN_ = 0,
@@ -23,6 +30,12 @@ typedef enum _LIBSYLVIA_TASK_STATUS_
 	_LIBSYLVIA_STATUS_DONE_ = 5
 }LIBSYLVIA_TASK_STATUS;
 
+typedef struct _LIBSYLVIA_CONTENT_ 
+{
+	unsigned int index;
+	std::string sData;
+}LIBSYLVIA_CONTENT;
+
 typedef struct _LIBSYLVIA_TASK_ 
 {
 	unsigned int TotalFrames;
@@ -35,14 +48,11 @@ typedef struct _LIBSYLVIA_TASK_
 	LIBSYLVIA_TASK_STATUS Status;
 	std::string URI;
 	std::string SaveAs;
-	std::deque<int> TaksQ;
+	std::deque<int> TaskQ;
+	pthread_rwlock_t TaskQLock;
+	std::deque<LIBSYLVIA_CONTENT> ContentsQ;
+	pthread_rwlock_t ContentsQLock;
 }LIBSYLVIA_TASK;
-
-typedef struct _LIBSYLVIA_CONTENT_ 
-{
-	unsigned int index;
-	std::string sData;
-}LIBSYLVIA_CONTENT;
 
 #define LIBSYLVIA_INTERVAL 10 * 1000 // 10'000 microseconds
 

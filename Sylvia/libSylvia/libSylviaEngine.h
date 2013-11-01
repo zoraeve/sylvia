@@ -27,14 +27,6 @@ public:
 public:
 	std::string currentURI;
 
-#if 0
-public:
-	bool busy;
-	bool bBusy();
-	int SaveToFile(const char* szSaveAs);
-	std::map<int, std::string> contents;
-#endif
-
 public:
 	int AddTask(LIBSYLVIA_TASK& task);
 	int cleanup();
@@ -42,18 +34,11 @@ public:
 public:
 	LIBSYLVIA_TASK task;
 
+public:
 	pthread_t tidWorker;
 	pthread_t tidSaveToFile;
-
-public:
-	std::deque<int> taskQ;
-	pthread_rwlock_t taskQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
 	pthread_t threadPool[LIBSLYVIA_THREADPOOLSIZE];
-	
-public:
-	std::deque<LIBSYLVIA_CONTENT> contentsQ;
-	pthread_rwlock_t contentsQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
-	
+
 public:
 	int GetHttpContentLength();
 
