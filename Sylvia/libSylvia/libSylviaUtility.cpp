@@ -7,7 +7,10 @@
 #include <fstream>
 using namespace std;
 
-#ifdef LIBSYLVIA_IN_LINUX
+
+#ifdef LIBSYLVIA_IN_WINDOWS
+#include <Windows.h>
+#elif defined LIBSYLVIA_IN_LINUX
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -117,6 +120,17 @@ int libSylvia_randomWrite(const char* pSavedAs, unsigned int nPos, std::string s
 
 	ofile.flush();
 	ofile.close();
+
+	return 0;
+}
+
+int libSylvia_sleep( unsigned long microseconds )
+{
+#ifdef LIBSYLVIA_IN_WINDOWS
+	Sleep(microseconds / 1000);
+#elif defined LIBSYLVIA_IN_LINUX
+	usleep(microseconds);
+#endif
 
 	return 0;
 }

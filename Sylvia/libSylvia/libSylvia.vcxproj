@@ -100,12 +100,16 @@ copy /Y ..\public\bin\zlib1.dll ..\Release</Command>
   <ItemGroup>
     <ClInclude Include="libSylvia.h" />
     <ClInclude Include="libSylviaLogger.h" />
+    <ClInclude Include="libSylviaTask.h" />
+    <ClInclude Include="libSylviaThreadPool.h" />
     <ClInclude Include="libSylviaUtility.h" />
     <ClInclude Include="libSylviaEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libSylvia.cpp" />
     <ClCompile Include="libSylviaLogger.cpp" />
+    <ClCompile Include="libSylviaTask.cpp" />
+    <ClCompile Include="libSylviaThreadPool.cpp" />
     <ClCompile Include="libSylviaUtility.cpp" />
     <ClCompile Include="libSylviaEngine.cpp" />
   </ItemGroup>

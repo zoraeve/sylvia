@@ -17,7 +17,7 @@
 #endif
 
 
-size_t httpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
+size_t thdHttpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
 	if (NULL == stream)
 	{
@@ -32,7 +32,7 @@ size_t httpHeaderHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 	return size * nmemb;
 }
 
-size_t httpContentHandler(void* ptr, size_t size, size_t nmemb, void* stream)
+size_t thdHttpContentHandler(void* ptr, size_t size, size_t nmemb, void* stream)
 {
 	if (NULL == stream)
 	{
@@ -78,11 +78,7 @@ void* thdGetHttpContent(void* lparam)
 		int nRet = pthread_rwlock_wrlock(&p->taskQLock);
 		if (0 != nRet)
 		{
-#ifdef LIBSYLVIA_IN_WINDOWS
-			Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-			usleep(LIBSYLVIA_INTERVAL);
-#endif
+			libSylvia_sleep(LIBSYLVIA_INTERVAL);
 			continue;
 		}
 		if (0 >= p->taskQ.size())
@@ -112,7 +108,7 @@ void* thdGetHttpContent(void* lparam)
 		char szRange[128] = {0};
 		sprintf(szRange, "%d-%d", index * LIBSYLVIA_SEGMENTSIZE, (index + 1) * LIBSYLVIA_SEGMENTSIZE - 1);
 		curl_easy_setopt(pCurl, CURLOPT_RANGE, szRange);
-		curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &httpContentHandler);
+		curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &thdHttpContentHandler);
 		curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &sData);
 
 		CURLcode cRet = curl_easy_perform(pCurl);
@@ -127,15 +123,11 @@ void* thdGetHttpContent(void* lparam)
 			LIBSYLVIA_CONTENT c;
 			c.index = index * LIBSYLVIA_SEGMENTSIZE;
 			c.sData = sData;
-			++p->finishedBlocks;
+			++p->task.CompleteParts;
 			nRet = pthread_rwlock_wrlock(&p->contentsQLock);
 			while(0 != nRet)
 			{
-#ifdef LIBSYLVIA_IN_WINDOWS
-				Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-				usleep(LIBSYLVIA_INTERVAL);
-#endif
+				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				nRet = pthread_rwlock_wrlock(&p->contentsQLock);
 			}
 			p->contentsQ.push_back(c);
@@ -151,11 +143,7 @@ void* thdGetHttpContent(void* lparam)
 			nRet = pthread_rwlock_wrlock(&p->taskQLock);
 			while(0 != nRet)
 			{
-#ifdef LIBSYLVIA_IN_WINDOWS
-				Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-				usleep(LIBSYLVIA_INTERVAL);
-#endif
+				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				nRet = pthread_rwlock_wrlock(&p->taskQLock);
 			}
 			p->taskQ.push_back(index);
@@ -176,7 +164,7 @@ void* thdSaveToFile(void* lparam)
 	}
 	libSylvia_engine* p = reinterpret_cast<libSylvia_engine*>(lparam);
 
-	while(!p->bComplete)
+	while(p->task.CompleteParts != p->task.TotalFrames)
 	{
 		while(p->contentsQ.size() > 0)
 		{
@@ -191,11 +179,7 @@ void* thdSaveToFile(void* lparam)
 			int nRet = pthread_rwlock_wrlock(&p->contentsQLock);
 			if (0 != nRet)
 			{
-#ifdef LIBSYLVIA_IN_WINDOWS
-				Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-				usleep(LIBSYLVIA_INTERVAL);
-#endif
+				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				continue;
 			}
 			if (0 >= p->contentsQ.size())
@@ -210,11 +194,7 @@ void* thdSaveToFile(void* lparam)
 
 			libSylvia_randomWrite(p->task.SaveAs.c_str(), c.index, c.sData);
 		}
-#ifdef LIBSYLVIA_IN_WINDOWS
-		Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-		usleep(LIBSYLVIA_INTERVAL);
-#endif
+		libSylvia_sleep(LIBSYLVIA_INTERVAL);
 	}
 
 	return NULL;
@@ -230,32 +210,36 @@ void* worker(void* lparam)
 
 	if (0 == p->task.URI.length())
 	{
+#if 0
 		p->busy = false;
+#endif
 		return NULL;
 	}
 
-	int nSize = p->GetHttpContentLength();
+	p->task.TotolSize = p->GetHttpContentLength();
 
-	if (0 >= nSize)
+	if (0 >= p->task.TotolSize)
 	{
 		LIBSYLVIA_LOG_ERROR("get http content length error");
+#if 0
 		p->busy = false;
+#endif
 		return NULL;
 	}
 
-	LIBSYLVIA_LOG_INFO("%s%d", "http content length: ", nSize);
+	LIBSYLVIA_LOG_INFO("%s%d", "http content length: ", p->task.TotolSize);
 
-	libSylvia_preAllocation(nSize, p->task.SaveAs.c_str());
+	libSylvia_preAllocation(p->task.TotolSize, p->task.SaveAs.c_str());
 
-	int nFrames = nSize / LIBSYLVIA_SEGMENTSIZE + 1;
-	for (int cnt = 0; cnt < nFrames; ++cnt)
+	p->task.TotalFrames = p->task.TotolSize / LIBSYLVIA_SEGMENTSIZE + 1;
+	for (int cnt = 0; cnt < p->task.TotalFrames; ++cnt)
 	{
 		p->taskQ.push_back(cnt);
 	}
 
-	LIBSYLVIA_LOG_INFO("%s%d%s", "Split to ", nFrames, " pieces");
+	LIBSYLVIA_LOG_INFO("%s%d%s", "Split to ", p->task.TotalFrames, " pieces");
 
-	p->progress = 0.0f;
+	p->task.Progress = 0.0f;
 
 	for (int cnt = 0; cnt < LIBSLYVIA_THREADPOOLSIZE; ++cnt)
 	{
@@ -266,31 +250,31 @@ void* worker(void* lparam)
 
 	do 
 	{
-		p->progress = ((float)(p->finishedBlocks) / (float)(nFrames)) * 100.00;
+		p->task.Progress = ((float)(p->task.CompleteParts) / (float)(p->task.TotalFrames)) * 100.00;
 #if 0
-		p->progress = ( (float)p->contents.size() / (float)nFrames ) * 100.0;
+		p->task.Progress = ( (float)p->contents.size() / (float)p->task.TotalFrames ) * 100.0;
 #endif
-		cout << p->progress << "% Complete" << endl;
-#ifdef LIBSYLVIA_IN_WINDOWS
-		Sleep(1000);
-#elif defined LIBSYLVIA_IN_LINUX
-		sleep(1);
+#ifdef _DEBUG
+		cout << p->task.Progress << "% Complete" << endl;
+#else
+		LIBSYLVIA_LOG_INFO("%f Complete", p->task.Progress);
 #endif
-	} while (p->contents.size() < nFrames);
+		libSylvia_sleep(LIBSYLVIA_INTERVAL * 100);
+	} while (p->task.CompleteParts < p->task.TotalFrames);
 
 	void* pRet = NULL;
 	pthread_join(p->tidSaveToFile, &pRet);
 
 	while(0 < p->contentsQ.size())
 	{
-		float progress = ( ((float)nFrames - (float)p->contentsQ.size() + 1.0) / (float)nFrames ) * 100.0;
+		p->task.Progress = ( ((float)p->task.TotalFrames - (float)p->contentsQ.size() + 1.0) / (float)p->task.TotalFrames ) * 100.0;
 
 		LIBSYLVIA_CONTENT c;
 		c = p->contentsQ.front();
 		p->contentsQ.pop_front();
 		libSylvia_randomWrite(p->task.SaveAs.c_str(), c.index, c.sData);
 
-		cout << progress << "% Complete" << endl;
+		cout << p->task.Progress << "% Complete" << endl;
 	}
 
 	cout << "100% Complete" << endl;
@@ -322,15 +306,15 @@ void* worker(void* lparam)
 
 libSylvia_engine::libSylvia_engine(void)
 {
-	busy = false;
+#if 0
+	p->busy = false;
+	contents.clear();
+#endif
+
 	task.URI = "";
 	task.SaveAs = "";
 	task.Method = _LIBSYLVIA_METHOD_UNKNOWN_;
-	progress = 0.0;
-	finishedBlocks = 0;
-	bComplete = false;
 
-	contents.clear();
 	contentsQ.clear();
 
 	pthread_rwlock_init(&taskQLock, NULL);
@@ -342,14 +326,19 @@ libSylvia_engine::~libSylvia_engine(void)
 {
 }
 
+#if 0
 bool libSylvia_engine::bBusy()
 {
 	return busy;
 }
+#endif
 
-int libSylvia_engine::addTask( LIBSYLVIA_TASK& t )
+int libSylvia_engine::AddTask( LIBSYLVIA_TASK& t )
 {
-	busy = true;
+#if 0
+	p->busy = false;
+#endif
+
 	task = t;
 
 	pthread_create(&tidWorker, NULL, worker, this);
@@ -389,7 +378,7 @@ int libSylvia_engine::GetHttpContentLength()
 	curl_easy_setopt(pCurl, CURLOPT_NOBODY, 1L);
 	curl_easy_setopt(pCurl, CURLOPT_TIMEOUT, 30);
 	curl_easy_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, 30);
-	curl_easy_setopt(pCurl, CURLOPT_HEADERFUNCTION, &httpHeaderHandler);
+	curl_easy_setopt(pCurl, CURLOPT_HEADERFUNCTION, &thdHttpHeaderHandler);
 	curl_easy_setopt(pCurl, CURLOPT_WRITEHEADER, &sHeader);
 
 
@@ -430,6 +419,7 @@ int libSylvia_engine::GetHttpContentLength()
 	}
 }
 
+#if 0
 int libSylvia_engine::SaveToFile( const char* szSaveAs )
 {
 	char szName[128] = {0};
@@ -467,12 +457,13 @@ int libSylvia_engine::SaveToFile( const char* szSaveAs )
 
 	return 0;
 }
+#endif
 
 int libSylvia_engine::query(LIBSYLVIA_STATUS& status)
 {
 	strncpy(status.szCurrentURI, task.URI.c_str(), task.URI.length());
 	strncpy(status.szCurrentSaveAs, task.SaveAs.c_str(), task.SaveAs.length());
-	status.currentProgress = progress;
+	status.currentProgress = task.Progress;
 
 	return 0;
 }

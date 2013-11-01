@@ -21,10 +21,10 @@
 #pragma comment(lib, "pthreadVC2.lib")
 #endif
 
-
 std::deque<LIBSYLVIA_TASK> libSylvia_taskQ;
+pthread_rwlock_t libSylvia_taskQLock = PTHREAD_RWLOCK_INITIALIZER;
+
 pthread_t libSylvia_thread;
-LIBSYLVIA_TASK libSylvia_currentTask;
 bool libSylvia_exit = true;
 
 libSylvia_engine* libSylvia_Engine; 
@@ -39,36 +39,45 @@ void* libSylvia_maintain(void* lparam)
 
 	while(!libSylvia_exit)
 	{
-		if (pEngine->bBusy())
+		int nRet = pthread_rwlock_wrlock(&libSylvia_taskQLock);
+		if (0 != nRet)
 		{
-#ifdef LIBSYLVIA_IN_WINDOWS
-			Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-			usleep(LIBSYLVIA_INTERVAL);
-#endif
+			libSylvia_sleep(LIBSYLVIA_INTERVAL);
 			continue;
 		}
-
-		if (libSylvia_taskQ.size())
+		if (0 >= libSylvia_taskQ.size())
 		{
-			libSylvia_currentTask = libSylvia_taskQ.front();
+			pthread_rwlock_unlock(&libSylvia_taskQLock);
+			libSylvia_sleep(LIBSYLVIA_INTERVAL);
+			continue;
+		}
+		while (libSylvia_taskQ.size())
+		{
+			pEngine->AddTask(libSylvia_taskQ.front());
 			libSylvia_taskQ.pop_front();
+		}
+		pthread_rwlock_unlock(&libSylvia_taskQLock);
 
-			pEngine->addTask(libSylvia_currentTask);
-		}
-		else
-		{
-#ifdef LIBSYLVIA_IN_WINDOWS
-			Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-			usleep(LIBSYLVIA_INTERVAL);
-#endif
-		}
+		libSylvia_sleep(LIBSYLVIA_INTERVAL);
 	}
 
 	pEngine->cleanup();
 
 	return NULL;
+}
+
+LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_AddTask(const LIBSYLVIA_TASK& task)
+{
+	int nRet = pthread_rwlock_wrlock(&libSylvia_taskQLock);
+	while(0 != nRet)
+	{
+		libSylvia_sleep(LIBSYLVIA_INTERVAL);
+		nRet = pthread_rwlock_wrlock(&libSylvia_taskQLock);
+	}
+	libSylvia_taskQ.push_back(task);
+	pthread_rwlock_unlock(&libSylvia_taskQLock);
+
+	return 0;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
@@ -103,7 +112,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpGet(const char* szURI, const 
 
 	task.Method = _LIBSYLVIA_METHOD_HTTP_;
 
-	libSylvia_taskQ.push_back(task);
+//	libSylvia_taskQ.push_back(task);
+	libSylvia_AddTask(task);
 
 	return 0;
 }
@@ -115,7 +125,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_httpsGet(const char* szURI, const
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_HTTPS_;
 
-	libSylvia_taskQ.push_back(task);
+//	libSylvia_taskQ.push_back(task);
+	libSylvia_AddTask(task);
 
 	return 0;
 }
@@ -127,7 +138,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ftpGet(const char* szURI, const c
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_FTP_;
 
-	libSylvia_taskQ.push_back(task);
+//	libSylvia_taskQ.push_back(task);
+	libSylvia_AddTask(task);
 
 	return 0;
 }
@@ -139,7 +151,8 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_sftpGet(const char* szURI, const 
 	task.SaveAs = szSaveAs;
 	task.Method = _LIBSYLVIA_METHOD_SFTP_;
 
-	libSylvia_taskQ.push_back(task);
+//	libSylvia_taskQ.push_back(task);
+	libSylvia_AddTask(task);
 
 	return 0;
 }

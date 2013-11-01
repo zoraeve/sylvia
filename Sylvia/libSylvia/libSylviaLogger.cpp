@@ -75,11 +75,7 @@ void* logger(void* lparam)
 			if (!libSylvia_logger_flag)
 			{
 				//pthread_cond_timedwait();
-#ifdef LIBSYLVIA_IN_WINDOWS
-				Sleep(LIBSYLVIA_INTERVAL);
-#elif defined LIBSYLVIA_IN_LINUX
-				usleep(LIBSYLVIA_INTERVAL);
-#endif
+				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				continue;
 			}
 			break;
