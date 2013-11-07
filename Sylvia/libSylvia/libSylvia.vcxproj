@@ -104,6 +104,7 @@ copy /Y ..\public\bin\zlib1.dll ..\Release</Command>
     <ClInclude Include="libSylviaThreadPool.h" />
     <ClInclude Include="libSylviaUtility.h" />
     <ClInclude Include="libSylviaEngine.h" />
+    <ClInclude Include="libSylviaMD5.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libSylvia.cpp" />
@@ -112,6 +113,7 @@ copy /Y ..\public\bin\zlib1.dll ..\Release</Command>
     <ClCompile Include="libSylviaThreadPool.cpp" />
     <ClCompile Include="libSylviaUtility.cpp" />
     <ClCompile Include="libSylviaEngine.cpp" />
+    <ClCompile Include="libSylviaMD5.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libSylvia.def" />

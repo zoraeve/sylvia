@@ -42,7 +42,7 @@ void* logger(void* lparam)
 	while(1)
 	{
 		pthread_rwlock_rdlock(&libSylvia_logger_logQlock);
-		if (logQ.size())
+		if (0 < logQ.size())
 		{
 			pthread_rwlock_unlock(&libSylvia_logger_logQlock);
 
@@ -85,6 +85,7 @@ void* logger(void* lparam)
 		}
 		else
 		{
+			pthread_rwlock_unlock(&libSylvia_logger_logQlock);
 			if (!libSylvia_logger_flag)
 			{
 				libSylvia_sleep(LIBSYLVIA_INTERVAL);

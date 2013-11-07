@@ -3,6 +3,8 @@
 #include "libSylviaUtility.h"
 #include "libSylviaLogger.h"
 
+#include "libSylviaTask.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -28,24 +30,26 @@ public:
 	std::string currentURI;
 
 public:
-	int AddTask(LIBSYLVIA_TASK& task);
+	int post(const LIBSYLVIA_TASK& task);
 	int cleanup();
 
 public:
-	LIBSYLVIA_TASK task;
+	std::deque<LIBSYLVIA_TASK> taskQ;
+	pthread_rwlock_t taskQLock;
 
 public:
-	pthread_t tidWorker;
-	pthread_t tidSaveToFile;
-	pthread_t threadPool[LIBSLYVIA_THREADPOOLSIZE];
+	std::map<std::string, libSylviaTask*> taskMap;
 
 public:
-	int GetHttpContentLength();
+	pthread_t tidMaintain;
 
 public:
-	int query(LIBSYLVIA_STATUS& status);
-	int pause();
-	int resume();
-	int cancel();
+	bool bExit;
+
+public:
+	int query(const char* index, LIBSYLVIA_INFO& info);
+	int pause(const char* index);
+	int resume(const char* index);
+	int cancel(const char* index);
 };
 

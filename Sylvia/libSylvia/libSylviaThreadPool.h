@@ -12,5 +12,9 @@ class libSylviaThreadPool
 public:
 	libSylviaThreadPool(void);
 	~libSylviaThreadPool(void);
+
+public:
+	int QueryAThread();
+	int PostTask();
 };
 
