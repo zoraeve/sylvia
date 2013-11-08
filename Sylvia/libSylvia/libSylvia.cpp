@@ -21,57 +21,14 @@
 #pragma comment(lib, "pthreadVC2.lib")
 #endif
 
-std::deque<LIBSYLVIA_TASK> libSylvia_taskQ;
-pthread_rwlock_t libSylvia_taskQLock = PTHREAD_RWLOCK_INITIALIZER;
-
-pthread_t libSylvia_thread;
 bool libSylvia_exit = true;
-
-libSylviaEngine* libSylvia_engine; 
-
-void* libSylvia_maintain(void* lparam)
-{
-	if (NULL == lparam)
-	{
-		return NULL;
-	}
-	libSylviaEngine* pEngine = reinterpret_cast<libSylviaEngine*>(lparam);
-
-	while(!libSylvia_exit)
-	{
-		int nRet = pthread_rwlock_wrlock(&libSylvia_taskQLock);
-		if (0 != nRet)
-		{
-			libSylvia_sleep(LIBSYLVIA_INTERVAL);
-			continue;
-		}
-		if (0 >= libSylvia_taskQ.size())
-		{
-			pthread_rwlock_unlock(&libSylvia_taskQLock);
-			libSylvia_sleep(LIBSYLVIA_INTERVAL);
-			continue;
-		}
-		while (libSylvia_taskQ.size())
-		{
-			pEngine->post(libSylvia_taskQ.front());
-			libSylvia_taskQ.pop_front();
-		}
-		pthread_rwlock_unlock(&libSylvia_taskQLock);
-
-		libSylvia_sleep(LIBSYLVIA_INTERVAL);
-	}
-
-	pEngine->cleanup();
-
-	return NULL;
-}
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_task(LIBSYLVIA_TASK& task, char* index)
 {
 	libSylvia_uuid(index);
 	task.Index = index;
 
-	libSylvia_engine->post(task);
+	libSylviaEngine::Instance()->post(task);
 
 	return 0;
 }
@@ -85,12 +42,9 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_ini()
 	}
 #endif
 
-	libSylvia_engine = new libSylviaEngine();
 	libSylvia_exit = false;
 
 	libSylvia_logger_ini(libSylvia_exit);
-
-	pthread_create(&libSylvia_thread, NULL, &libSylvia_maintain, (void*)libSylvia_engine);
 
 	return 0;
 }
@@ -104,8 +58,6 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_fin()
 	libSylvia_exit = true;
 
 	libSylvia_logger_fin(libSylvia_exit);
-
-	delete libSylvia_engine;
 
 	return 0;
 }
@@ -167,28 +119,28 @@ LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_query(const char* index, LIBSYLVI
 		return -1;
 	}
 
-	return libSylvia_engine->query(index, info);
+	return libSylviaEngine::Instance()->query(index, info);
 
 	return 0;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_pause(const char* index)
 {
-	return libSylvia_engine->pause(index);
+	return libSylviaEngine::Instance()->pause(index);
 
 	return 0;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_resume(const char* index)
 {
-	return libSylvia_engine->resume(index);
+	return libSylviaEngine::Instance()->resume(index);
 
 	return 0;
 }
 
 LIBSYLVIA_API int LIBSYLVIA_CALLBACK libSylvia_cancel(const char* index)
 {
-	return libSylvia_engine->cancel(index);
+	return libSylviaEngine::Instance()->cancel(index);
 
 	return 0;
 }

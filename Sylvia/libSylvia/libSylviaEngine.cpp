@@ -16,6 +16,14 @@
 #include <unistd.h>
 #endif
 
+libSylviaEngine* libSylviaEngine::ins = new libSylviaEngine();
+
+int cbTaskNotify(void* p)
+{
+	libSylviaEngine::Instance()->onNotify((const char*)p);
+
+	return 0;
+}
 
 void* thdMaintain(void* lparam)
 {
@@ -23,44 +31,44 @@ void* thdMaintain(void* lparam)
 	{
 		return NULL;
 	}
-	libSylviaEngine* p = reinterpret_cast<libSylviaEngine*>(lparam);
 
-	while(!p->bExit)
+	while(!libSylviaEngine::Instance()->bExit)
 	{
-		int iRet = pthread_rwlock_rdlock(&p->taskQLock);
+		int iRet = pthread_rwlock_rdlock(&libSylviaEngine::Instance()->taskQLock);
 		if (0 != iRet)
 		{
 			libSylvia_sleep(LIBSYLVIA_INTERVAL);
 			continue;
 		}
-		if (p->taskQ.size() > 0)
+		if (libSylviaEngine::Instance()->taskQ.size() > 0)
 		{
-			pthread_rwlock_unlock(&p->taskQLock);
+			pthread_rwlock_unlock(&libSylviaEngine::Instance()->taskQLock);
 
-			iRet = pthread_rwlock_wrlock(&p->taskQLock);
+			iRet = pthread_rwlock_wrlock(&libSylviaEngine::Instance()->taskQLock);
 			if (0 != iRet)
 			{
 				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				continue;
 			}
 
-			if (0 >= p->taskQ.size())
+			if (0 >= libSylviaEngine::Instance()->taskQ.size())
 			{
-				pthread_rwlock_unlock(&p->taskQLock);
+				pthread_rwlock_unlock(&libSylviaEngine::Instance()->taskQLock);
 				libSylvia_sleep(LIBSYLVIA_INTERVAL);
 				continue;
 			}
 
-			LIBSYLVIA_TASK t = p->taskQ.front();
-			p->taskQ.pop_front();
-			pthread_rwlock_unlock(&p->taskQLock);
+			LIBSYLVIA_TASK t = libSylviaEngine::Instance()->taskQ.front();
+			libSylviaEngine::Instance()->taskQ.pop_front();
+			pthread_rwlock_unlock(&libSylviaEngine::Instance()->taskQLock);
 
 			libSylviaTask* task = new libSylviaTask(t);
-			p->taskMap.insert(std::make_pair(t.Index, task));
+			task->Start(&cbTaskNotify);
+			libSylviaEngine::Instance()->taskMap.insert(std::make_pair(task->TI, task));
 		}
 		else
 		{
-			pthread_rwlock_unlock(&p->taskQLock);
+			pthread_rwlock_unlock(&libSylviaEngine::Instance()->taskQLock);
 		}
 
 		libSylvia_sleep(LIBSYLVIA_INTERVAL);
@@ -84,10 +92,6 @@ libSylviaEngine::libSylviaEngine(void)
 	pthread_create(&tidMaintain, NULL, &thdMaintain, this);
 }
 
-libSylviaEngine::~libSylviaEngine(void)
-{
-	curl_global_cleanup();
-}
 
 int libSylviaEngine::post( const LIBSYLVIA_TASK& t )
 {
@@ -106,6 +110,11 @@ int libSylviaEngine::post( const LIBSYLVIA_TASK& t )
 int libSylviaEngine::cleanup()
 {
 	bExit = true;
+
+	void* pRet;
+	pthread_join(tidMaintain, &pRet);
+
+	curl_global_cleanup();
 
 	return 0;
 }
@@ -159,5 +168,10 @@ int libSylviaEngine::resume( const char* index )
 
 	return iter->second->Resume();
 
+	return 0;
+}
+
+int libSylviaEngine::onNotify( const char* index )
+{
 	return 0;
 }

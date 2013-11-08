@@ -36,9 +36,11 @@ public:
 	time_t Expend;
 	std::string URI;
 	std::string SaveAs;
+	libSylvia_cbNotify cbNotify;
 
 public:
-	pthread_t tidMaintain;
+	pthread_t tidNotify;
+	pthread_t tidWorker;
 	pthread_t tidSaveToFile;
 	pthread_t threadPool[LIBSLYVIA_THREADPOOLSIZE];
 	
@@ -51,7 +53,7 @@ public:
 	pthread_rwlock_t ContentsQLock/* = PTHREAD_RWLOCK_INITIALIZER*/;
 
 public:
-	int Start();
+	int Start(libSylvia_cbNotify cb);
 	int Stop();
 
 public:
@@ -62,5 +64,8 @@ public:
 	int Pause();
 	int Resume();
 	int Cancel();
+
+public:
+	int Notify();
 };
 

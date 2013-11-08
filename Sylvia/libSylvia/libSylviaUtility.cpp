@@ -224,7 +224,6 @@ int libSylvia_urlEncode(const char* szSrc, char* pBuf, int cbBufLen, bool bUpper
 		return 0;
 	}
 
-	//先转换到UTF-8
 #ifdef LIBSYLVIA_IN_WINDOWS
 	int cchWideChar = MultiByteToWideChar(CP_ACP, 0, szSrc, cbMultiBytes, NULL, 0);
 	LPWSTR pUnicode = (LPWSTR)malloc((cchWideChar + 1) * sizeof(WCHAR));
@@ -249,7 +248,7 @@ int libSylvia_urlEncode(const char* szSrc, char* pBuf, int cbBufLen, bool bUpper
 
 	char baseChar = bUpperCase ? 'A' : 'a';
 	unsigned char c;
-	int cbDest = 0; //累加
+	int cbDest = 0;
 	unsigned char *pSrc = (unsigned char*)pUTF8;
 	unsigned char *pDest = (unsigned char*)pBuf;
 	while(*pSrc && cbDest < cbBufLen - 1)
@@ -269,7 +268,6 @@ int libSylvia_urlEncode(const char* szSrc, char* pBuf, int cbBufLen, bool bUpper
 		}
 		else
 		{
-			//检查缓冲区大小是否够用？
 			if(cbDest + 3 > cbBufLen - 1)
 				break;
 			pDest[0] = '%';
@@ -280,7 +278,7 @@ int libSylvia_urlEncode(const char* szSrc, char* pBuf, int cbBufLen, bool bUpper
 		}
 		++pSrc;
 	}
-	//null-terminator
+
 	*pDest = '\0';
 #ifdef LIBSYLVIA_IN_WINDOWS
 	free(pUnicode);
@@ -305,7 +303,7 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 	if(pUTF8 == NULL)
 		return -2;
 
-	int cbDest = 0; //累加
+	int cbDest = 0;
 	unsigned char *pSrc = (unsigned char*)szSrc;
 	unsigned char *pDest = (unsigned char*)pUTF8;
 	while(*pSrc)
@@ -313,7 +311,6 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 		if(*pSrc == '%')
 		{
 			*pDest = 0;
-			//高位
 			if(pSrc[1] >= 'A' && pSrc[1] <= 'F')
 				*pDest += (pSrc[1] - 'A' + 10) * 0x10;
 			else if(pSrc[1] >= 'a' && pSrc[1] <= 'f')
@@ -321,7 +318,6 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 			else
 				*pDest += (pSrc[1] - '0') * 0x10;
 
-			//低位
 			if(pSrc[2] >= 'A' && pSrc[2] <= 'F')
 				*pDest += (pSrc[2] - 'A' + 10);
 			else if(pSrc[2] >= 'a' && pSrc[2] <= 'f')
@@ -344,7 +340,7 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 		++pDest;
 		++cbDest;
 	}
-	//null-terminator
+
 	*pDest = '\0';
 	++cbDest;
 

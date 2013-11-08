@@ -270,9 +270,30 @@ void* thdWorker(void* lparam)
 		p->ContentsQ.pop_front();
 		libSylvia_randomWrite(p->SaveAs.c_str(), c.index, c.sData);
 
+#ifdef _DEBUG
 		cout << p->Progress << "% Complete" << endl;
+#else
+		LIBSYLVIA_LOG_INFO("%f Complete", p->Progress);
+#endif
 	}
-	cout << "100% Complete" << endl;
+#ifdef _DEBUG
+	cout << "100.0% Complete" << endl;
+#else
+	LIBSYLVIA_LOG_INFO("100.0% Complete");
+#endif
+	
+	return NULL;
+}
+
+void* thdNotify(void* lparam)
+{
+	if (NULL == lparam)
+	{
+		return NULL;
+	}
+	libSylviaTask* p = reinterpret_cast<libSylviaTask*>(lparam);
+
+	p->Notify();
 
 	return NULL;
 }
@@ -296,17 +317,34 @@ libSylviaTask::libSylviaTask( const LIBSYLVIA_TASK& task )
 	MinSpeed = 0;
 	DownloadSize = 0;
 	Expend = time(NULL);
-
-	Start();
+	cbNotify = NULL;
 }
 
 libSylviaTask::~libSylviaTask(void)
 {
+	TI;
+	URI;
+	SaveAs;
+	Method;
+	Status;
+	TotalFrames;
+	CompleteParts;
+	TotolSize;
+	Progress;
+	AvgSpeed;
+	MaxSpeed;
+	MinSpeed;
+	DownloadSize;
+	Expend;
+	cbNotify = NULL;
 }
 
-int libSylviaTask::Start()
+int libSylviaTask::Start(libSylvia_cbNotify cb)
 {
-	pthread_create(&tidMaintain, NULL, &thdWorker, this);
+	cbNotify = cb;
+
+	pthread_create(&tidWorker, NULL, &thdWorker, this);
+	pthread_create(&tidNotify, NULL, &thdNotify, this);
 
 	return 0;
 }
@@ -398,5 +436,20 @@ int libSylviaTask::Resume()
 
 int libSylviaTask::Pause()
 {
+	return 0;
+}
+
+int libSylviaTask::Notify()
+{
+	if (NULL == cbNotify)
+	{
+		return -1;
+	}
+
+	while(100.0 > Progress)
+	{
+		cbNotify((void*)(this));
+	}
+
 	return 0;
 }

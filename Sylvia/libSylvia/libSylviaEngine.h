@@ -23,8 +23,19 @@ using namespace std;
 class libSylviaEngine
 {
 public:
+	static libSylviaEngine* Instance()
+	{
+		if (NULL == ins)
+		{
+			ins = new libSylviaEngine();
+		}
+		return ins;
+	}
+
+private:
+	static libSylviaEngine* ins;
+
 	libSylviaEngine(void);
-	~libSylviaEngine(void);
 
 public:
 	std::string currentURI;
@@ -51,5 +62,7 @@ public:
 	int pause(const char* index);
 	int resume(const char* index);
 	int cancel(const char* index);
+
+	int onNotify(const char* index);
 };
 

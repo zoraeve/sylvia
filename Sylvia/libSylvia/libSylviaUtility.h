@@ -98,6 +98,8 @@ typedef struct _LIBSYLVIA_TASK_
 
 #define LIBSYLVIA_UUID_LENGTH 64
 
+typedef int (*libSylvia_cbNotify)(void*);
+
 int libSylvia_guessWhat(const char* pURI, std::string& sSavedAs);
 int libSylvia_preAllocation(const unsigned int nSizeOfBytes, const char* pSavedAs);
 int libSylvia_randomWrite(const char* pSavedAs, unsigned int nPos, std::string sData);
