@@ -106,5 +106,5 @@ int libSylvia_md5(const void* pSrcBuf, const unsigned int nSrcLen, char* pDstBuf
 int libSylvia_uuid(char uuid[LIBSYLVIA_UUID_LENGTH]);
 int libSylvia_urlDecode(const char* pSrc, char* pDst, int nDstLen);
 int libSylvia_urlEncode(const char* pSrc, char* pDst, int nDstLen, bool bUpperCase);
-int libSylvia_convertUTF8ToGB18030(const char* pSrc, int iLen, char* pDst);
-int libSylvia_convertGB18030ToUTF8(const char* pSrc, int iLen, char* pDst);
+// int libSylvia_convertUTF8ToGB18030(const char* pSrc, int iLen, char* pDst);
+// int libSylvia_convertGB18030ToUTF8(const char* pSrc, int iLen, char* pDst);

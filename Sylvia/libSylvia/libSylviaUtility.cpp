@@ -72,6 +72,18 @@ int libSylvia_guessWhat(const char* pURI, std::string& sSavedAs)
 	std::string sExt = (sURI.end() == iter) ? sURI : sURI.substr(0, sURI.find_first_of(*iter));
 
 	sSavedAs = sName + "." + sExt;
+	
+	char* tmp = new char[sSavedAs.length() * 2 + 1];
+	memset(tmp, 0, sSavedAs.length() * 2 + 1);
+	if (0 != libSylvia_urlDecode(sSavedAs.c_str(), tmp, sSavedAs.length() * 2))
+	{
+		delete[] tmp;
+		return 0;
+	}
+
+	sSavedAs.clear();
+	sSavedAs = tmp;
+	delete[] tmp;
 
 	return 0;
 }
@@ -230,30 +242,9 @@ int libSylvia_urlEncode(const char* szSrc, char* pBuf, int cbBufLen, bool bUpper
 	WideCharToMultiByte(CP_UTF8, 0, pUnicode, cchWideChar, pUTF8, cbUTF8 + 1, NULL, NULL);
 	pUTF8[cbUTF8] = '\0';
 #elif defined LIBSYLVIA_IN_LINUX
-	char* pUTF8 = (char*)malloc(cbMultiBytes * 2 + 1);
-	int cbUTF8 = cbMultiBytes * 2;
-
-	iconv_t cd;
-	cd = iconv_open("UTF-8", "GB18030");
-	if ((iconv_t)-1 == cd)
-	{
-		printf("iconv_open error");
-		return -1;
-	}
-	char *pi1 = pUTF8;
-	char **pi2 = &pi1;
-	char *po1 = pUTF8;
-	char **po2 = &po1;
-	size_t ilen = cbMultiBytes;
-	size_t olen = cbUTF8;
-	iconv(cd, (char**)pi2, &ilen, (char**)po2, &olen);
-	if ((iconv_t)-1 == cd)
-	{
-		printf("iconv error");
-		return -2;
-	}
-	printf("%s", pUTF8);
-	iconv_close(cd);
+	int cbUTF8 = strlen(szSrc) + 1;
+	char* pUTF8 = (char*)malloc(cbUTF8);
+	strncpy(pUTF8, szSrc, strlen(szSrc));
 #endif
 
 	char baseChar = bUpperCase ? 'A' : 'a';
@@ -368,27 +359,7 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)pUTF8, cbDest, pUnicode, cchWideChar);
 	WideCharToMultiByte(CP_ACP, 0, pUnicode, cchWideChar, pBuf, cbBufLen, NULL, NULL);
 #elif defined LIBSYLVIA_IN_LINUX
-	iconv_t cd;
-	cd = iconv_open("UTF-8", "GB18030");
-	if ((iconv_t)-1 == cd)
-	{
-		printf("iconv_open error");
-		return -1;
-	}
-	char *pi1 = pUTF8;
-	char **pi2 = &pi1;
-	char *po1 = pBuf;
-	char **po2 = &po1;
-	size_t ilen = strlen(pUTF8);
-	size_t olen = cbBufLen;
-	iconv(cd, (char**)pi2, &ilen, (char**)po2, &olen);
-	if ((iconv_t)-1 == cd)
-	{
-		printf("iconv error");
-		return -2;
-	}
-	printf("%s", pBuf);
-	iconv_close(cd);
+	strncpy(pBuf, pUTF8, (strlen(pUTF8) < cbBufLen ? strlen(pUTF8) : cbBufLen));
 #endif
 	
 	free(pUTF8);
@@ -398,60 +369,3 @@ int libSylvia_urlDecode(const char* szSrc, char* pBuf, int cbBufLen)
 
 	return 0;
 }
-// 
-// int libSylvia_convertGB18030ToUTF8(const char* pSrc, const int iLen, char* pDst)
-// {
-// #ifdef LIBSYLVIA_IN_LINUX
-// 	iconv_t cd;
-// 	cd = iconv_open("UTF-8", "GB18030");
-// 	if ((iconv_t)-1 == cd)
-// 	{
-// 		printf("iconv_open error");
-// 		return -1;
-// 	}
-// 	char *pi1 = pSrc;
-// 	char **pi2 = &pi1;
-// 	char *po1 = pDst;
-// 	char **po2 = &po1;
-// 	size_t ilen = iLen;
-// 	size_t olen = 1024;
-// 	iconv(cd, (char**)pi2, &ilen, (char**)po2, &olen);
-// 	if ((iconv_t)-1 == cd)
-// 	{
-// 		printf("iconv error");
-// 		return -2;
-// 	}
-// 	printf("%s", pDst);
-// 	iconv_close(cd);
-// #endif
-// 
-// 	return 0;
-// }
-// 
-// int libSylvia_convertUTF8ToGB18030(const char* pSrc, int iLen, char* pDst)
-// {
-// #ifdef LIBSYLVIA_IN_LINUX
-// 	iconv_t cd;
-// 	cd = iconv_open("GB18030", "UTF-8");
-// 	if ((iconv_t)-1 == cd)
-// 	{
-// 		printf("iconv_open error");
-// 		return -1;
-// 	}
-// 	char *pi1 = pSrc;
-// 	char **pi2 = &pi1;
-// 	char *po1 = pDst;
-// 	char **po2 = &po1;
-// 	size_t ilen = iLen;
-// 	size_t olen = 1024;
-// 	iconv(cd, (char**)pi2, &ilen, (char**)po2, &olen);
-// 	if ((iconv_t)-1 == cd)
-// 	{
-// 		printf("iconv error");
-// 		return -2;
-// 	}
-// 	printf("%s", pDst);
-// 	iconv_close(cd);
-// #endif
-// 	return 0;
-// }
