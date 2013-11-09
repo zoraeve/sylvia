@@ -1,3 +1,8 @@
+/*
+ *	(C)2013 Edmond
+ */
+
+
 #pragma once
 
 #ifndef __LIBSYLIVIA__
