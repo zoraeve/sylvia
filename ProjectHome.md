@@ -1,0 +1,1 @@
+a lib can download resource using http and ftp
